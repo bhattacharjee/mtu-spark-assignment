@@ -74,6 +74,9 @@ def process_line(line):
     # 4. We return res
     return res
 
+
+
+
 # Add two elements to each row
 def enriched_line(line):
     raw_tuple = process_line(line)
@@ -81,6 +84,9 @@ def enriched_line(line):
     d = datetime.strptime(raw_tuple[0], dateformat)
     date_info_tuple = (d.hour, d.weekday())
     return raw_tuple + date_info_tuple
+
+
+
 
 def filter_by_latitude_longitude(lat1:float, lat2: float, long1: float, long2:float):
     latitude1 = min(lat1, lat2)
@@ -100,7 +106,16 @@ def filter_by_latitude_longitude(lat1:float, lat2: float, long1: float, long2:fl
 
     return filter_fn
 
-def filter_by_weekday_latitude_longitude_and_hours(lat1:float, lat2: float, long1: float, long2:float, hours_list:list):
+
+
+
+def filter_by_weekday_latitude_longitude_and_hours(\
+        lat1:float,\
+        lat2:float,\
+        long1:float,\
+        long2:float,\
+        hours_list:list):
+
     latitude1 = min(lat1, lat2)
     latitude2 = max(lat1, lat2)
     longitude1 = min(long1, long2)
@@ -117,6 +132,8 @@ def filter_by_weekday_latitude_longitude_and_hours(lat1:float, lat2: float, long
             the_longitude <= longitude2 and the_longitude >= longitude1
 
     return filter_fn
+
+
 
 def is_weekday(row):
     dateformat = '%Y-%m-%d %H:%M:%S'
@@ -158,16 +175,26 @@ def my_main(sc,
     # TO BE COMPLETED
     # ---------------------------------------
 
+    # Split by the key and create a tuple
     splitRDD = inputRDD.map(process_line)
-    filteredRDD = splitRDD.filter(filter_by_weekday_latitude_longitude_and_hours(north, south, east, west, hours_list))
+
+    # Filter by coordinates, weekday and hours
+    filteredRDD = splitRDD.filter(\
+            filter_by_weekday_latitude_longitude_and_hours(\
+                north, south, east, west, hours_list))
 
     # Now that we have the filtered RDD, we will create a new RDD that contains 3 things:
     # 1. hour 
     # 2.  PAIR
     #     2.1 Count of congested (0 or 1)
     #     2.2 Total count (always 1)
-    pairedRDD = filteredRDD.map(lambda x: (get_hour(x), (x[3], 1,)))
-    reducedRDD = pairedRDD.reduceByKey(lambda x, y: (x[0] + y[0], x[1] + y[1],))
+    pairedRDD = filteredRDD.map(\
+            lambda x: (get_hour(x), (x[3], 1,)))
+
+    # We need to find aggregates per hour, so we'll create a pair
+    # where the hour is the key
+    reducedRDD = pairedRDD.reduceByKey(\
+            lambda x, y: (x[0] + y[0], x[1] + y[1],))
 
     # groupedRDD contains the percentages and counts
     groupedRDD = reducedRDD.map(\
@@ -175,7 +202,10 @@ def my_main(sc,
                     (f'{x[0]:02d}', get_percentage(x[1]), x[1][1], x[1][0]))
 
     # Now we need to sort it, so we'll need to create another pair
+    # where the percentage is the key, since we are sorting by percentage
     pairedRDD = groupedRDD.map(lambda x: (x[1], x))
+
+    # After sorting, remove the key from the pair
     solutionRDD = pairedRDD.sortByKey(ascending=False).map(lambda x: x[1])
 
     # ---------------------------------------
