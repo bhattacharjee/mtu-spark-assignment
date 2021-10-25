@@ -19,6 +19,7 @@
 import pyspark
 import time
 import datetime
+from datetime import datetime
 
 #         0                 1             2         3          4          5        6          7         8        9
 #       DATE             BUS_LINE   BUS_LINE_PTN  CONGEST   LOINGITD   LATITUD   DELAY     VEHICL   CLSR_STP   AT_STP
@@ -63,6 +64,32 @@ def process_line(line):
     # 4. We return res
     return res
 
+def filter_by_latitude_longitude_and_congest(lat1:float, lat2: float, long1: float, long2:float):
+    latitude1 = min(lat1, lat2)
+    latitude2 = max(lat1, lat2)
+    longitude1 = min(long1, long2)
+    longitude2 = max(long1, long2)
+
+    def filter_fn(row: tuple)->bool:
+        the_latitude = row[5]
+        the_longitude = row[4]
+        the_congestion = row[3]
+        if the_latitude <= latitude2 and the_latitude >= latitude1 and \
+            the_longitude <= longitude2 and the_longitude >= longitude1 and \
+            1 == the_congestion:
+            return True
+        else:
+            return False
+
+    return filter_fn
+
+def filter_by_weekday(row):
+    dateformat = '%Y-%m-%d %H:%M:%S'
+    thedate = row[0]
+    d = datetime.strptime(thedate, dateformat)
+    return d.weekday() < 5
+
+
 # ------------------------------------------
 # FUNCTION my_main
 # ------------------------------------------
@@ -77,7 +104,12 @@ def my_main(sc,
 
     # 1. Operation C1: 'textFile'
     inputRDD = sc.textFile(my_dataset_dir)
-    newRDD = inputRDD.map(lambda x: list(process_line(x)))
+    for i in inputRDD.take(5):
+        print(i)
+    print("input rdd count = ", inputRDD.count())
+    splitRDD = inputRDD.map(lambda x: list(process_line(x)))
+    weekDayRDD = splitRDD.filter(filter_by_weekday)
+    print("week day rdd count = ", weekDayRDD.count())
 
     t = newRDD.take(3)
     [print(type(l), l) for l in t]
