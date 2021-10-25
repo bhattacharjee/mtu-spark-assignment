@@ -1,0 +1,5 @@
+{"identifier": {"name": "Luis", "surname": "Johnson"}, "eyes": "Brown", "city": "Madrid", "age": 34, "likes": [{"sport": "Football", "score": 10}, {"sport": "Basketball", "score": 6}, {"sport": "Tennis", "score": 5}]} 
+{"identifier": {"name": "John", "surname": "Rossi"}, "eyes": "Blue", "city": "Paris", "age": 20, "likes": [{"sport": "Football", "score": 8}, {"sport": "Basketball", "score": 4}]}
+{"identifier": {"name": "Francesca", "surname": "Depardieu"}, "eyes": "Blue", "city": "London", "age": 26, "likes": [{"sport": "Tennis", "score": 8}, {"sport": "Basketball", "score": 7}]}
+{"identifier": {"name": "Laurant", "surname": "Muller"}, "eyes": "Green", "city": "Paris", "age": 26, "likes": [{"sport": "Tennis", "score": 1}]}
+{"identifier": {"name": "Gertrud", "surname": "Gonzalez"}, "eyes": "Green", "city": "Dublin", "age": 32, "likes": [{"sport": "Rugby", "score": 10}]}

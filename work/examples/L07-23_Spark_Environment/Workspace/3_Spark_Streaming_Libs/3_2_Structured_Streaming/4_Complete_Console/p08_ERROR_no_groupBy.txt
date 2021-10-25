@@ -1,0 +1,7 @@
+
+---------------------------
+ RESULTS		
+---------------------------
+
+ERROR: Complete output mode not supported when there are no streaming aggregations on streaming DataFrames/Datasets.
+
