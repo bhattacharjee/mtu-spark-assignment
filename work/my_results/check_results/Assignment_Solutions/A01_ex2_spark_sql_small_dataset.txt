@@ -1,0 +1,5 @@
+Row(lineID=50, stationID=279, arrivalTime='08:09:00', onTime=1)
+Row(lineID=50, stationID=450, arrivalTime='08:11:00', onTime=0)
+Row(lineID=50, stationID=750, arrivalTime='08:13:00', onTime=1)
+Row(lineID=72, stationID=750, arrivalTime='08:14:00', onTime=1)
+Row(lineID=72, stationID=900, arrivalTime='08:16:00', onTime=0)

@@ -1,0 +1,2 @@
+Row(bucket_id=0, bucket_size='0_1', num_vehicles=1)
+Row(bucket_id=1, bucket_size='1_2', num_vehicles=1)

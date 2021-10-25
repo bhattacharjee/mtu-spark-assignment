@@ -1,0 +1,13 @@
+Row(bucket_id=0, bucket_size='0_50', num_vehicles=27)
+Row(bucket_id=1, bucket_size='50_100', num_vehicles=99)
+Row(bucket_id=2, bucket_size='100_150', num_vehicles=137)
+Row(bucket_id=3, bucket_size='150_200', num_vehicles=207)
+Row(bucket_id=4, bucket_size='200_250', num_vehicles=214)
+Row(bucket_id=5, bucket_size='250_300', num_vehicles=102)
+Row(bucket_id=6, bucket_size='300_350', num_vehicles=31)
+Row(bucket_id=7, bucket_size='350_400', num_vehicles=2)
+Row(bucket_id=8, bucket_size='400_450', num_vehicles=2)
+
+
+
+--- Completed ---
