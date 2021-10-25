@@ -135,7 +135,7 @@ def get_hour(row):
 
 def get_percentage(x):
     try:
-        return x[0] / x[1]
+        return x[0] * 100 / x[1]
     except:
         return 0.0
 
@@ -168,7 +168,15 @@ def my_main(sc,
     #     2.2 Total count (always 1)
     pairedRDD = filteredRDD.map(lambda x: (get_hour(x), (x[3], 1,)))
     reducedRDD = pairedRDD.reduceByKey(lambda x, y: (x[0] + y[0], x[1] + y[1],))
-    solutionRDD = reducedRDD.map(lambda x: (x[0], get_percentage(x[1]))).sortByKey()
+
+    # groupedRDD contains the percentages and counts
+    groupedRDD = reducedRDD.map(\
+                    lambda x: \
+                    (f'{x[0]:02d}', get_percentage(x[1]), x[1][1], x[1][0]))
+
+    # Now we need to sort it, so we'll need to create another pair
+    pairedRDD = groupedRDD.map(lambda x: (x[1], x))
+    solutionRDD = pairedRDD.sortByKey(ascending=False).map(lambda x: x[1])
 
     # ---------------------------------------
 
@@ -210,8 +218,8 @@ if __name__ == '__main__':
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_3/"
-    #my_dataset_dir = '/home/phantom/nacho_assignment/data/my_dataset_complete'
-    my_dataset_dir = '/home/phantom/nacho_assignment/data/A01_ex1_micro_dataset_1'
+    my_dataset_dir = '/home/phantom/nacho_assignment/data/my_dataset_complete'
+    #my_dataset_dir = '/home/phantom/nacho_assignment/data/A01_ex1_micro_dataset_1'
 
     if local_False_databricks_True == False:
         # TODO: get this back to normal
