@@ -82,7 +82,7 @@ def enriched_line(line):
     date_info_tuple = (d.hour, d.weekday())
     return raw_tuple + date_info_tuple
 
-def filter_by_latitude_longitude_and_congest(lat1:float, lat2: float, long1: float, long2:float):
+def filter_by_latitude_longitude(lat1:float, lat2: float, long1: float, long2:float):
     latitude1 = min(lat1, lat2)
     latitude2 = max(lat1, lat2)
     longitude1 = min(long1, long2)
@@ -93,8 +93,26 @@ def filter_by_latitude_longitude_and_congest(lat1:float, lat2: float, long1: flo
         the_longitude = row[4]
         the_congestion = row[3]
         if the_latitude <= latitude2 and the_latitude >= latitude1 and \
-            the_longitude <= longitude2 and the_longitude >= longitude1 and \
-            1 == the_congestion:
+            the_longitude <= longitude2 and the_longitude >= longitude1:
+            return True
+        else:
+            return False
+
+    return filter_fn
+
+def filter_by_weekday_latitude_longitude(lat1:float, lat2: float, long1: float, long2:float):
+    latitude1 = min(lat1, lat2)
+    latitude2 = max(lat1, lat2)
+    longitude1 = min(long1, long2)
+    longitude2 = max(long1, long2)
+
+    def filter_fn(row: tuple)->bool:
+        the_latitude = row[5]
+        the_longitude = row[4]
+        the_congestion = row[3]
+        if filter_by_weekday(row) and \
+            the_latitude <= latitude2 and the_latitude >= latitude1 and \
+            the_longitude <= longitude2 and the_longitude >= longitude1:
             return True
         else:
             return False
@@ -111,7 +129,16 @@ def key_value_by_hour(row):
     d = datetime.strptime(row[0], dateformat)
     return (d.hour, row)
 
+def get_hour(row):
+    dateformat = '%Y-%m-%d %H:%M:%S'
+    d = datetime.strptime(row[0], dateformat)
+    return d.hour
 
+def get_percentage(x):
+    try:
+        return x[0] / x[1]
+    except:
+        return 0.0
 
 # ------------------------------------------
 # FUNCTION my_main
@@ -127,22 +154,22 @@ def my_main(sc,
 
     # 1. Operation C1: 'textFile'
     inputRDD = sc.textFile(my_dataset_dir)
-    splitRDD = inputRDD.map(process_line)
-    weekDayRDD = splitRDD.filter(filter_by_weekday)
-
-    pairedRDD = weekDayRDD.map(key_value_by_hour)
-    groupedRDD = pairedRDD.groupByKey()
-
-    for v in groupedRDD.collect():
-        print(v[0], "----> ")
-        for v in v[1]:
-            print(v)
-    
 
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
 
+    splitRDD = inputRDD.map(process_line)
+    filteredRDD = splitRDD.filter(filter_by_weekday_latitude_longitude(north, south, east, west))
+
+    # Now that we have the filtered RDD, we will create a new RDD that contains 3 things:
+    # 1. hour 
+    # 2.  PAIR
+    #     2.1 Count of congested (0 or 1)
+    #     2.2 Total count (always 1)
+    pairedRDD = filteredRDD.map(lambda x: (get_hour(x), (x[3], 1,)))
+    reducedRDD = pairedRDD.reduceByKey(lambda x, y: (x[0] + y[0], x[1] + y[1],))
+    solutionRDD = reducedRDD.map(lambda x: (x[0], get_percentage(x[1]))).sortByKey()
 
     # ---------------------------------------
 
