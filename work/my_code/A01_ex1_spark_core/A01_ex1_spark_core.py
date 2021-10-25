@@ -77,7 +77,7 @@ def my_main(sc,
 
     # 1. Operation C1: 'textFile'
     inputRDD = sc.textFile(my_dataset_dir)
-    newRDD = inputRDD.map(process_line)
+    newRDD = inputRDD.map(lambda x: list(process_line(x)))
 
     t = newRDD.take(3)
     [print(type(l), l) for l in t]
