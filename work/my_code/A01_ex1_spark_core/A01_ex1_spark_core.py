@@ -20,6 +20,10 @@ import pyspark
 import time
 import datetime
 
+#         0                 1             2         3          4          5        6          7         8        9
+#       DATE             BUS_LINE   BUS_LINE_PTN  CONGEST   LOINGITD   LATITUD   DELAY     VEHICL   CLSR_STP   AT_STP
+# '2013-01-19 08:00:36',   40,       '015B1002',    0,     -6.258078, 53.359279,  300,      33488,      279,     0
+
 # ------------------------------------------
 # FUNCTION process_line
 # ------------------------------------------
@@ -73,9 +77,10 @@ def my_main(sc,
 
     # 1. Operation C1: 'textFile'
     inputRDD = sc.textFile(my_dataset_dir)
+    newRDD = inputRDD.map(process_line)
 
-    t = inputRDD.take(3)
-    [print(l) for l in t]
+    t = newRDD.take(3)
+    [print(type(l), l) for l in t]
 
     # ---------------------------------------
     # TO BE COMPLETED
@@ -127,7 +132,7 @@ if __name__ == '__main__':
     if local_False_databricks_True == False:
         # TODO: get this back to normal
         #my_dataset_dir = my_local_path + my_dataset_dir
-        my_dataset_dir = my_local_path + my_dataset_dir
+        my_dataset_dir = my_dataset_dir
     else:
         my_dataset_dir = my_databricks_path + my_dataset_dir
 
