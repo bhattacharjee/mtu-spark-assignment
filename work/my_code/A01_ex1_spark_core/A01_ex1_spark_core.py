@@ -21,9 +21,19 @@ import time
 import datetime
 from datetime import datetime
 
+# ORIGINAL SCHEMA
+# ---------------
 #         0                 1             2         3          4          5        6          7         8        9
 #       DATE             BUS_LINE   BUS_LINE_PTN  CONGEST   LOINGITD   LATITUD   DELAY     VEHICL   CLSR_STP   AT_STP
 # '2013-01-19 08:00:36',   40,       '015B1002',    0,     -6.258078, 53.359279,  300,      33488,      279,     0
+# ---------------
+
+# ORIGINAL SCHEMA
+# ---------------
+#         0                 1             2         3          4          5        6          7         8        9        10           11
+#       DATE             BUS_LINE   BUS_LINE_PTN  CONGEST   LOINGITD   LATITUD   DELAY     VEHICL   CLSR_STP   AT_STP   HOUROFDAY DAYOFWEEK
+# '2013-01-19 08:00:36',   40,       '015B1002',    0,     -6.258078, 53.359279,  300,      33488,      279,     0        12            5
+# ---------------
 
 # ------------------------------------------
 # FUNCTION process_line
@@ -64,6 +74,14 @@ def process_line(line):
     # 4. We return res
     return res
 
+# Add two elements to each row
+def enriched_line(line):
+    raw_tuple = process_line(line)
+    dateformat = '%Y-%m-%d %H:%M:%S'
+    d = datetime.strptime(raw_tuple[0], dateformat)
+    date_info_tuple = (d.hour, d.weekday())
+    return raw_tuple + date_info_tuple
+
 def filter_by_latitude_longitude_and_congest(lat1:float, lat2: float, long1: float, long2:float):
     latitude1 = min(lat1, lat2)
     latitude2 = max(lat1, lat2)
@@ -85,9 +103,14 @@ def filter_by_latitude_longitude_and_congest(lat1:float, lat2: float, long1: flo
 
 def filter_by_weekday(row):
     dateformat = '%Y-%m-%d %H:%M:%S'
-    thedate = row[0]
-    d = datetime.strptime(thedate, dateformat)
+    d = datetime.strptime(row[0], dateformat)
     return d.weekday() < 5
+
+def key_value_by_hour(row):
+    dateformat = '%Y-%m-%d %H:%M:%S'
+    d = datetime.strptime(row[0], dateformat)
+    return (d.hour, row)
+
 
 
 # ------------------------------------------
@@ -104,15 +127,17 @@ def my_main(sc,
 
     # 1. Operation C1: 'textFile'
     inputRDD = sc.textFile(my_dataset_dir)
-    for i in inputRDD.take(5):
-        print(i)
-    print("input rdd count = ", inputRDD.count())
-    splitRDD = inputRDD.map(lambda x: list(process_line(x)))
+    splitRDD = inputRDD.map(process_line)
     weekDayRDD = splitRDD.filter(filter_by_weekday)
-    print("week day rdd count = ", weekDayRDD.count())
 
-    t = newRDD.take(3)
-    [print(type(l), l) for l in t]
+    pairedRDD = weekDayRDD.map(key_value_by_hour)
+    groupedRDD = pairedRDD.groupByKey()
+
+    for v in groupedRDD.collect():
+        print(v[0], "----> ")
+        for v in v[1]:
+            print(v)
+    
 
     # ---------------------------------------
     # TO BE COMPLETED
@@ -159,6 +184,7 @@ if __name__ == '__main__':
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_3/"
+    #my_dataset_dir = '/home/phantom/nacho_assignment/data/my_dataset_complete'
     my_dataset_dir = '/home/phantom/nacho_assignment/data/A01_ex1_micro_dataset_1'
 
     if local_False_databricks_True == False:
