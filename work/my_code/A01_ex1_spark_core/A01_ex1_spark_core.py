@@ -100,26 +100,25 @@ def filter_by_latitude_longitude(lat1:float, lat2: float, long1: float, long2:fl
 
     return filter_fn
 
-def filter_by_weekday_latitude_longitude(lat1:float, lat2: float, long1: float, long2:float):
+def filter_by_weekday_latitude_longitude_and_hours(lat1:float, lat2: float, long1: float, long2:float, hours_list:list):
     latitude1 = min(lat1, lat2)
     latitude2 = max(lat1, lat2)
     longitude1 = min(long1, long2)
     longitude2 = max(long1, long2)
+    hours = hours_list if hours_list != None else list(range(0, 13))
+    hours = [int(h) for h in hours]
 
     def filter_fn(row: tuple)->bool:
         the_latitude = row[5]
         the_longitude = row[4]
         the_congestion = row[3]
-        if filter_by_weekday(row) and \
+        return is_weekday(row) and get_hour(row) in hours and \
             the_latitude <= latitude2 and the_latitude >= latitude1 and \
-            the_longitude <= longitude2 and the_longitude >= longitude1:
-            return True
-        else:
-            return False
+            the_longitude <= longitude2 and the_longitude >= longitude1
 
     return filter_fn
 
-def filter_by_weekday(row):
+def is_weekday(row):
     dateformat = '%Y-%m-%d %H:%M:%S'
     d = datetime.strptime(row[0], dateformat)
     return d.weekday() < 5
@@ -160,7 +159,7 @@ def my_main(sc,
     # ---------------------------------------
 
     splitRDD = inputRDD.map(process_line)
-    filteredRDD = splitRDD.filter(filter_by_weekday_latitude_longitude(north, south, east, west))
+    filteredRDD = splitRDD.filter(filter_by_weekday_latitude_longitude_and_hours(north, south, east, west, hours_list))
 
     # Now that we have the filtered RDD, we will create a new RDD that contains 3 things:
     # 1. hour 
