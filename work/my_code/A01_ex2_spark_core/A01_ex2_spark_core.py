@@ -18,6 +18,7 @@
 
 import pyspark
 import time
+import functools
 
 # ------------------------------------------
 # FUNCTION process_line
@@ -58,6 +59,23 @@ def process_line(line):
     # 4. We return res
     return res
 
+
+def sort_cmp_fn(row: tuple, row2: tuple) -> bool:
+    # Sort order, bus line first and then the timestamp
+
+    # bus line matches and date matches
+    if row1[1] == row2[1] and row1[0] == row2[0]:
+        return 0
+    # Compare the bus line first and then the timestamp
+    if row1[1] < row2[1]:
+        return -1
+    elif row1[1] > ros2[1]:
+        return 1
+    if row1[0] < row2[0]:
+        return -1
+    elif row1[0] > row2[0]:
+        return 1
+
 # ------------------------------------------
 # FUNCTION my_main
 # ------------------------------------------
@@ -80,11 +98,23 @@ def my_main(sc,
     filteredRDD = parsedRDD.filter(\
             lambda x: 1 == x[9] and \
                         x[0].startswith(day_picked) and \
-                        vehicle_id == x[7] and \
-                        abs(x[6]) <= abs(delay_limit))
+                        vehicle_id == x[7])
 
+    # Since we are going to remove duplicates if the the bus is stopped
+    # we'll first sort by timestamp
+    sortedRDD = filteredRDD.sortBy(lambda x: x[0])
 
-    [print(x) for x in filteredRDD.take(5)]
+    # Now we will group and reduce by station id and line id
+    pairedRDD = sortedRDD.map(lambda x: ((x[1], x[8]), x))
+    reducedRDD = pairedRDD.reduceByKey(lambda x, _: x)\
+                    .map(lambda x: x[1])\
+                    .sortBy(lambda x: x[0])
+    solutionRDD = reducedRDD.map(\
+            lambda x: ( \
+                    x[1],\
+                    x[8],\
+                    x[0].split(" ")[1],\
+                    1 if abs(x[6]) <= delay_limit else 0))
 
 
     # ---------------------------------------
