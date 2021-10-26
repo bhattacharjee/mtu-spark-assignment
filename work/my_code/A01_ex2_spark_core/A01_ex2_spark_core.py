@@ -100,21 +100,30 @@ def my_main(sc,
                         x[0].startswith(day_picked) and \
                         vehicle_id == x[7])
 
+    # Discard fields that we do not need to make it faster
+    filteredRDD = filteredRDD.map(lambda x: (x[0], x[1], x[6], x[8]))
+
     # Since we are going to remove duplicates if the the bus is stopped
     # we'll first sort by timestamp
     sortedRDD = filteredRDD.sortBy(lambda x: x[0])
 
     # Now we will group and reduce by station id and line id
-    pairedRDD = sortedRDD.map(lambda x: ((x[1], x[8]), x))
+    # In the remapped tuple x[8] is now x[3] and x[1] is still x[1]
+    pairedRDD = sortedRDD.map(lambda x: ((x[1], x[3]), x))
+
+
+    # Drop values where the bus hasn't moved and the line is still the same
     reducedRDD = pairedRDD.reduceByKey(lambda x, _: x)\
-                    .map(lambda x: x[1])\
-                    .sortBy(lambda x: x[0])
+                    .sortBy(lambda x: x[1][0])
+    
+    # In the remapped tuple x[8] is now x[3] and x[6] is now x[2]
+    # Reorder the tuple to match the output form, also discard the date
     solutionRDD = reducedRDD.map(\
             lambda x: ( \
-                    x[1],\
-                    x[8],\
-                    x[0].split(" ")[1],\
-                    1 if abs(x[6]) <= delay_limit else 0))
+                    x[1][1],\
+                    x[1][3],\
+                    x[1][0].split(" ")[1],\
+                    1 if abs(x[1][2]) <= delay_limit else 0))
 
 
     # ---------------------------------------
