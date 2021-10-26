@@ -74,7 +74,17 @@ def my_main(sc,
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
-    [print(x) for x in inputRDD.take(5)]
+    parsedRDD = inputRDD.map(process_line)
+
+    # Filter to remove items that don't match
+    filteredRDD = parsedRDD.filter(\
+            lambda x: 1 == x[9] and \
+                        x[0].startswith(day_picked) and \
+                        vehicle_id == x[7] and \
+                        abs(x[6]) <= abs(delay_limit))
+
+
+    [print(x) for x in filteredRDD.take(5)]
 
 
     # ---------------------------------------
@@ -116,6 +126,7 @@ if __name__ == '__main__':
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_3/"
     my_dataset_dir = "/home/phantom/nacho_assignment/data/A01_ex2_micro_dataset_1"
+    #my_dataset_dir = "/home/phantom/nacho_assignment/data/my_dataset_complete"
 
     if local_False_databricks_True == False:
         #my_dataset_dir = my_local_path + my_dataset_dir
