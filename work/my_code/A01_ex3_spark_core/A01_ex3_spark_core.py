@@ -80,10 +80,41 @@ def my_main(sc,
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
-    [print(x) for x in inputRDD.take(2)]
+    
+    # String comparisons for date will work here and will
+    # be less expensive than parsing the date each time
     end_time = get_end_time(current_time, seconds_horizon)
 
+    # Convert the string of lines to tuples
+    parsedRDD = inputRDD.map(process_line)
 
+    # Filter the records to include only
+    # 1. Buses that are on the stop
+    # 2. within the time window 
+    filteredRDD = parsedRDD.filter( \
+            lambda x: \
+                1 == x[9] and \
+                x[0] >= current_time and x[0] < end_time)
+
+    pairedRDD = filteredRDD.map( \
+            lambda x: \
+                ( \
+                    (x[8], x[7]), # (closer-stop, vehicle-id)
+                    (x[0], x[8], x[7]))) # (timestamp, closer-stop, vehicle-id)
+    
+    # Drop entries where the same bus is in the same stop and has
+    # been already counted
+    uniqueVehicleStopRDD = pairedRDD.reduceByKey(lambda x, _: x)
+
+    # Now we want to create a list like this (stop, [vehicle1, vehicle2]) and so on
+    pairedRDD = uniqueVehicleStopRDD.map( \
+            lambda x: \
+                ( \
+                    x[1][1], # closer-stop
+                    [x[1][2]])) # [vehicleid]
+                 
+    solutionRDD = pairedRDD.reduceByKey(lambda x, y: x + y) \
+                            .map(lambda x: (x[0], sorted(x[1])))
 
     # ---------------------------------------
 
@@ -110,7 +141,6 @@ if __name__ == '__main__':
     # 1. We use as many input arguments as needed
     current_time = "2013-01-07 06:30:00"
     seconds_horizon = 1800
-    end_time = get_end_time(current_time, seconds_horizon)
 
     # 2. Local or Databricks
     local_False_databricks_True = False
@@ -125,6 +155,7 @@ if __name__ == '__main__':
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex3_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex3_micro_dataset_3/"
     my_dataset_dir = "/home/phantom/nacho_assignment/data/A01_ex3_micro_dataset_1"
+    #my_dataset_dir = "/home/phantom/nacho_assignment/data/my_dataset_complete"
 
     if local_False_databricks_True == False:
         my_dataset_dir = my_local_path + my_dataset_dir
