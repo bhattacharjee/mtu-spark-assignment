@@ -19,6 +19,7 @@
 import pyspark
 import time
 import datetime
+from math import radians, cos, sin, asin, sqrt
 
 # ------------------------------------------
 # FUNCTION process_line
@@ -59,23 +60,18 @@ def process_line(line):
     # 4. We return res
     return res
 
-def get_sortable(x: tuple):
-    return (x[7], x[0],)
-
-
-from math import radians, cos, sin, asin, sqrt
-
-def haversine_wrapper(cord1: tuple, cord2: tuple) -> float:
-    lon1, lat1 = cord1
-    lon2, lat2 = cord2
-    R = 6371.0088
-    dLat = radians(lat2 - lat1)
-    dLon = radians(lon2 - lon1)
-    lat1 = radians(lat1)
-    lat2 = radians(lat2)
-    a = sin(dLat/2)**2 + cos(lat1)*cos(lat2)*sin(dLon/2)**2
-    c = 2*asin(sqrt(a))
-    return R * c
+def haversine_distance(cord1: tuple, cord2: tuple) -> float:
+    longitude1, latitude1 = cord1
+    longitude2, latitude2 = cord2
+    radius_of_earth_km = 6371.0088
+    delta_lat_radians = radians(latitude2 - latitude1)
+    delta_long_radians = radians(longitude2 - longitude1)
+    latitude1 = radians(latitude1)
+    latitude2 = radians(latitude2)
+    a = sin(delta_lat_radians / 2) ** 2 
+    a = a + cos(latitude1) * cos(latitude2) * sin(delta_long_radians / 2) ** 2
+    c = 2 * asin(sqrt(a))
+    return radius_of_earth_km * c
 
 def get_speed(ts1: str, ts2: str, dist:float) -> float:
     try:
@@ -86,7 +82,6 @@ def get_speed(ts1: str, ts2: str, dist:float) -> float:
         seconds = abs(tt.total_seconds())
         return abs(dist) / seconds * 1000
     except:
-        print("exception")
         return sys.float_info.max
 
 # ------------------------------------------
@@ -127,8 +122,11 @@ def my_main(sc,
                         x[0],           # end timestamp for segment
                         (x[4], x[5]),   # start coordinates for segment
                         (x[4], x[5]),   # end coordinates for segments
-                        0)))            # Lenth of segment
+                        0               # Lenth of segment
+                )
+            ))
 
+    # >>----------------------------------------------------
     def join_segments(first: tuple, second: tuple) -> tuple:
         if first[1] > second[0]:
             print(f"Unexpected overlaps between segments {first} {second}")
@@ -141,34 +139,31 @@ def my_main(sc,
         if first[0] > second[0]:
             first, second = second, first
 
-        add_distance = haversine_wrapper(first[3], second[2])
+        add_distance = haversine_distance(first[3], second[2])
         speed = get_speed(first[1], second[0], add_distance)
         add_distance = 0 if speed > max_speed_accepted else add_distance
 
-        retval = ( \
-                    first[0],
-                    second[1],
-                    first[2],
-                    second[3],
-                    first[4] + second[4] + add_distance,)
-        return retval
+        return (first[0],  \
+                second[1], \
+                first[2],  \
+                second[3], \
+                first[4] + second[4] + add_distance,)
+    # <<----------------------------------------------------
 
+    reducedRDD = pairedRDD.reduceByKey(join_segments) \
+                            .map(lambda x: x[1][4])
 
-        
-
+    # >>----------------------------------------------------
     def get_initial_bucket(x: float):
         bucket_num = int(x // bucket_size)
         bucket_range = f"{int(bucket_num * bucket_size)}-{int(bucket_num * bucket_size + bucket_size)}"
         return (bucket_num, (bucket_num, bucket_range, 1))
-
-    reducedRDD = pairedRDD.reduceByKey(join_segments) \
-                            .map(lambda x: x[1][4])
+    # <<----------------------------------------------------
 
     initialBucketRDD = reducedRDD.map(get_initial_bucket)
     solutionRDD = initialBucketRDD.reduceByKey(lambda x, y: (x[0], x[1], x[2] + y[2])) \
                                     .map(lambda x: x[1]) \
                                     .sortBy(lambda x: x[0])
-
 
     # ---------------------------------------
 
@@ -179,15 +174,6 @@ def my_main(sc,
         print(item)
 
     # ---------------------------------------
-    """
-    def prdd(xx, name):
-        print(name)
-        print('------------------------------')
-        print(day_picked)
-        print('----------')
-        [print(x) for x in xx.collect()]
-        print('=' * 80, '\n\n\n')
-    """
 
 # --------------------------------------------------------
 #
@@ -221,8 +207,8 @@ if __name__ == '__main__':
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_3/"
-    #my_dataset_dir = "/home/phantom/nacho_assignment/data/A01_ex4_micro_dataset_1"
-    my_dataset_dir = "/home/phantom/nacho_assignment/data/my_dataset_complete"
+    my_dataset_dir = "/home/phantom/nacho_assignment/data/A01_ex4_micro_dataset_1"
+    #my_dataset_dir = "/home/phantom/nacho_assignment/data/my_dataset_complete"
 
     if local_False_databricks_True == False:
         my_dataset_dir = my_local_path + my_dataset_dir
