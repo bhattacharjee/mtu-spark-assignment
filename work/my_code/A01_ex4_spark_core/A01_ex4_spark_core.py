@@ -207,8 +207,8 @@ if __name__ == '__main__':
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_3/"
-    my_dataset_dir = "/home/phantom/nacho_assignment/data/A01_ex4_micro_dataset_1"
-    #my_dataset_dir = "/home/phantom/nacho_assignment/data/my_dataset_complete"
+    #my_dataset_dir = "/home/phantom/nacho_assignment/data/A01_ex4_micro_dataset_1"
+    my_dataset_dir = "/home/phantom/nacho_assignment/data/my_dataset_complete"
 
     if local_False_databricks_True == False:
         my_dataset_dir = my_local_path + my_dataset_dir
