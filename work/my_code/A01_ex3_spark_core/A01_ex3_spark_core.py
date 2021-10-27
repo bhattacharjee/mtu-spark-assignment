@@ -99,8 +99,9 @@ def my_main(sc,
     pairedRDD = filteredRDD.map( \
             lambda x: \
                 ( \
-                    (x[8], x[7]), # (closer-stop, vehicle-id)
-                    (x[0], x[8], x[7]))) # (timestamp, closer-stop, vehicle-id)
+                    (x[8], x[7]),       # (closer-stop, vehicle-id)
+                    (x[0], x[8], x[7])  # (timestamp, closer-stop, vehicle-id)
+                ))
     
     # Drop entries where the same bus is in the same stop and has
     # been already counted
@@ -110,8 +111,9 @@ def my_main(sc,
     pairedRDD = uniqueVehicleStopRDD.map( \
             lambda x: \
                 ( \
-                    x[1][1], # closer-stop
-                    [x[1][2]])) # [vehicleid]
+                    x[1][1],    # closer-stop
+                    [x[1][2]]   # [vehicleid]
+                ))
                  
     candidateRDD = pairedRDD.reduceByKey(lambda x, y: x + y)
 
@@ -120,8 +122,8 @@ def my_main(sc,
     filteredCandidateRDD = candidateRDD.filter(lambda x: maxLength == len(x[1]))
 
     solutionRDD = filteredCandidateRDD\
-                        .map(lambda x: (x[0], sorted(x[1]))) \
-                        .sortBy(lambda x: x[0])
+                    .map(lambda x: (x[0], sorted(x[1]))) \
+                    .sortBy(lambda x: x[0])
 
 
     # ---------------------------------------
