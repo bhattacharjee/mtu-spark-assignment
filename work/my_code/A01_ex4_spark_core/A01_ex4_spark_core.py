@@ -58,6 +58,9 @@ def process_line(line):
     # 4. We return res
     return res
 
+def get_sortable(x: tuple):
+    return (x[7], x[0],)
+
 # ------------------------------------------
 # FUNCTION my_main
 # ------------------------------------------
@@ -71,11 +74,65 @@ def my_main(sc,
     # 1. Operation C1: 'textFile'
     inputRDD = sc.textFile(my_dataset_dir)
 
-    [print(x) for x in inputRDD.take(5)]
 
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
+    
+    # Select lines for the day we have
+    selectedRDD = inputRDD.filter(lambda x: x.startswith(day_picked))
+
+    # Parse the lines
+    parsedRDD = selectedRDD.map(process_line)
+
+    # sort by vehicle id and timestamp
+    sortedRDD = parsedRDD.sortBy(ascending=True, keyfunc=lambda x: (x[7], x[0],))
+
+    # Create a map, each segment is a set of coordinates along the route
+    # of a vehicle. We just store the first and the last coordinate
+    # This will allow us to merge two consecutive coordinates
+    pairedRDD = sortedRDD.map( \
+            lambda x: \
+            (
+                x[7],   # vehicle id
+                ( \
+                        x[0],           # start timestamp for segment
+                        x[0],           # end timestamp for segment
+                        (x[4], x[5]),   # start coordinates for segment
+                        (x[4], x[5]),   # end coordinates for segments
+                        0)))            # Lenth of segment
+
+    def join_segments(first: tuple, second: tuple) -> tuple:
+        if first[1] > second[0]:
+            print(f"Unexpected overlaps between segments {first} {second}")
+            return first 
+        if first[0] > first[1] or second[0] > second[1]:
+            print(f"Segments not properly formed {first} {second}")
+            return first 
+
+        # Swap if first comes after second
+        if first[0] > second[0]:
+            first, second = second, first
+
+
+        return first 
+        
+
+    reducedRDD = pairedRDD.reduceByKey(join_segments)
+
+
+    def prdd(xx, name):
+        print(name)
+        print('------------------------------')
+        print(day_picked)
+        print('----------')
+        [print(x) for x in xx.collect()]
+        print('=' * 80, '\n\n\n')
+
+    prdd(parsedRDD, 'parsedRDD')
+    prdd(reducedRDD, 'sortedRDD')
+
+
 
 
     # ---------------------------------------
@@ -118,6 +175,7 @@ if __name__ == '__main__':
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_3/"
     my_dataset_dir = "/home/phantom/nacho_assignment/data/A01_ex4_micro_dataset_1"
+    #my_dataset_dir = "/home/phantom/nacho_assignment/data/my_dataset_complete"
 
     if local_False_databricks_True == False:
         my_dataset_dir = my_local_path + my_dataset_dir
