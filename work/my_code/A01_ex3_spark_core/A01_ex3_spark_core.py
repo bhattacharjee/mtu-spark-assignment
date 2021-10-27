@@ -59,6 +59,12 @@ def process_line(line):
     # 4. We return res
     return res
 
+def get_end_time(current_time:str, seconds_horizon:int) -> str:
+    dateformat = "%Y-%m-%d %H:%M:%S"
+    d = datetime.datetime.strptime(current_time, dateformat)
+    d = d + datetime.timedelta(seconds=seconds_horizon)
+    return d.strftime(dateformat)
+
 # ------------------------------------------
 # FUNCTION my_main
 # ------------------------------------------
@@ -75,6 +81,8 @@ def my_main(sc,
     # TO BE COMPLETED
     # ---------------------------------------
     [print(x) for x in inputRDD.take(2)]
+    end_time = get_end_time(current_time, seconds_horizon)
+
 
 
     # ---------------------------------------
@@ -102,6 +110,7 @@ if __name__ == '__main__':
     # 1. We use as many input arguments as needed
     current_time = "2013-01-07 06:30:00"
     seconds_horizon = 1800
+    end_time = get_end_time(current_time, seconds_horizon)
 
     # 2. Local or Databricks
     local_False_databricks_True = False
