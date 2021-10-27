@@ -113,8 +113,16 @@ def my_main(sc,
                     x[1][1], # closer-stop
                     [x[1][2]])) # [vehicleid]
                  
-    solutionRDD = pairedRDD.reduceByKey(lambda x, y: x + y) \
-                            .map(lambda x: (x[0], sorted(x[1])))
+    candidateRDD = pairedRDD.reduceByKey(lambda x, y: x + y)
+
+    maxLength = len(candidateRDD.max(lambda x: len(x[1]))[1])
+
+    filteredCandidateRDD = candidateRDD.filter(lambda x: maxLength == len(x[1]))
+
+    solutionRDD = filteredCandidateRDD\
+                        .map(lambda x: (x[0], sorted(x[1]))) \
+                        .sortBy(lambda x: x[0])
+
 
     # ---------------------------------------
 
@@ -154,8 +162,8 @@ if __name__ == '__main__':
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex3_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex3_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex3_micro_dataset_3/"
-    my_dataset_dir = "/home/phantom/nacho_assignment/data/A01_ex3_micro_dataset_1"
-    #my_dataset_dir = "/home/phantom/nacho_assignment/data/my_dataset_complete"
+    #my_dataset_dir = "/home/phantom/nacho_assignment/data/A01_ex3_micro_dataset_1"
+    my_dataset_dir = "/home/phantom/nacho_assignment/data/my_dataset_complete"
 
     if local_False_databricks_True == False:
         my_dataset_dir = my_local_path + my_dataset_dir
