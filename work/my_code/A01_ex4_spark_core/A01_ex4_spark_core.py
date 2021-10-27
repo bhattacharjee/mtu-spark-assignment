@@ -18,6 +18,7 @@
 
 import pyspark
 import time
+import datetime
 
 # ------------------------------------------
 # FUNCTION process_line
@@ -61,6 +62,33 @@ def process_line(line):
 def get_sortable(x: tuple):
     return (x[7], x[0],)
 
+
+from math import radians, cos, sin, asin, sqrt
+
+def haversine_wrapper(cord1: tuple, cord2: tuple) -> float:
+    lon1, lat1 = cord1
+    lon2, lat2 = cord2
+    R = 6371.0088
+    dLat = radians(lat2 - lat1)
+    dLon = radians(lon2 - lon1)
+    lat1 = radians(lat1)
+    lat2 = radians(lat2)
+    a = sin(dLat/2)**2 + cos(lat1)*cos(lat2)*sin(dLon/2)**2
+    c = 2*asin(sqrt(a))
+    return R * c
+
+def get_speed(ts1: str, ts2: str, dist:float) -> float:
+    try:
+        dateformat = "%Y-%m-%d %H:%M:%S"
+        t1 = datetime.datetime.strptime(ts1, dateformat)
+        t2 = datetime.datetime.strptime(ts2, dateformat)
+        tt = t2 - t1
+        seconds = abs(tt.total_seconds())
+        return abs(dist) / seconds * 1000
+    except:
+        print("exception")
+        return sys.float_info.max
+
 # ------------------------------------------
 # FUNCTION my_main
 # ------------------------------------------
@@ -73,7 +101,6 @@ def my_main(sc,
 
     # 1. Operation C1: 'textFile'
     inputRDD = sc.textFile(my_dataset_dir)
-
 
     # ---------------------------------------
     # TO BE COMPLETED
@@ -114,13 +141,45 @@ def my_main(sc,
         if first[0] > second[0]:
             first, second = second, first
 
+        add_distance = haversine_wrapper(first[3], second[2])
+        speed = get_speed(first[1], second[0], add_distance)
+        add_distance = 0 if speed > max_speed_accepted else add_distance
 
-        return first 
+        retval = ( \
+                    first[0],
+                    second[1],
+                    first[2],
+                    second[3],
+                    first[4] + second[4] + add_distance,)
+        return retval
+
+
         
 
-    reducedRDD = pairedRDD.reduceByKey(join_segments)
+    def get_initial_bucket(x: float):
+        bucket_num = int(x // bucket_size)
+        bucket_range = f"{int(bucket_num * bucket_size)}-{int(bucket_num * bucket_size + bucket_size)}"
+        return (bucket_num, (bucket_num, bucket_range, 1))
+
+    reducedRDD = pairedRDD.reduceByKey(join_segments) \
+                            .map(lambda x: x[1][4])
+
+    initialBucketRDD = reducedRDD.map(get_initial_bucket)
+    solutionRDD = initialBucketRDD.reduceByKey(lambda x, y: (x[0], x[1], x[2] + y[2])) \
+                                    .map(lambda x: x[1]) \
+                                    .sortBy(lambda x: x[0])
 
 
+    # ---------------------------------------
+
+    # Operation A1: 'collect'
+    print(solutionRDD)
+    resVAL = solutionRDD.collect()
+    for item in resVAL:
+        print(item)
+
+    # ---------------------------------------
+    """
     def prdd(xx, name):
         print(name)
         print('------------------------------')
@@ -128,19 +187,7 @@ def my_main(sc,
         print('----------')
         [print(x) for x in xx.collect()]
         print('=' * 80, '\n\n\n')
-
-    prdd(parsedRDD, 'parsedRDD')
-    prdd(reducedRDD, 'sortedRDD')
-
-
-
-
-    # ---------------------------------------
-
-    # Operation A1: 'collect'
-    resVAL = solutionRDD.collect()
-    for item in resVAL:
-        print(item)
+    """
 
 # --------------------------------------------------------
 #
@@ -174,8 +221,8 @@ if __name__ == '__main__':
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_3/"
-    my_dataset_dir = "/home/phantom/nacho_assignment/data/A01_ex4_micro_dataset_1"
-    #my_dataset_dir = "/home/phantom/nacho_assignment/data/my_dataset_complete"
+    #my_dataset_dir = "/home/phantom/nacho_assignment/data/A01_ex4_micro_dataset_1"
+    my_dataset_dir = "/home/phantom/nacho_assignment/data/my_dataset_complete"
 
     if local_False_databricks_True == False:
         my_dataset_dir = my_local_path + my_dataset_dir
