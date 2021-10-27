@@ -71,6 +71,8 @@ def my_main(sc,
     # 1. Operation C1: 'textFile'
     inputRDD = sc.textFile(my_dataset_dir)
 
+    [print(x) for x in inputRDD.take(5)]
+
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
@@ -108,12 +110,14 @@ if __name__ == '__main__':
 
     # 3. We set the path to my_dataset and my_result
     my_local_path = "../../../../3_Code_Examples/L07-23_Spark_Environment/"
+    my_local_path = ""
     my_databricks_path = "/"
 
     my_dataset_dir = "FileStore/tables/6_Assignments/my_dataset_complete/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_3/"
+    my_dataset_dir = "/home/phantom/nacho_assignment/data/A01_ex4_micro_dataset_1"
 
     if local_False_databricks_True == False:
         my_dataset_dir = my_local_path + my_dataset_dir
