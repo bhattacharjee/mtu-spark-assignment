@@ -104,6 +104,7 @@ if __name__ == '__main__':
     else:
         my_dataset_dir = my_databricks_path + my_dataset_dir
 
+    print(my_dataset_dir)
     # 4. We configure the Spark Session
     spark = pyspark.sql.SparkSession.builder.getOrCreate()
     spark.sparkContext.setLogLevel('WARN')
