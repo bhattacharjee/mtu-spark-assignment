@@ -108,6 +108,8 @@ def my_main(spark,
     # TO BE COMPLETED
     # ---------------------------------------
 
+
+    # --------------------------------------------------------------------
     def get_distance(ts1, lat1, lon1, ts2, lat2, lon2):
         try:
             distance = haversine_distance((lon1, lat1,), (lon2, lat2,))
@@ -120,29 +122,43 @@ def my_main(spark,
             return 0.0
 
     dist_udf = f.udf(get_distance, pyspark.sql.types.FloatType())
+    # --------------------------------------------------------------------
 
+
+    # --------------------------------------------------------------------
     def get_bucketnum(dist):
         return int(dist // bucket_size)
 
     bucketnum_udf = f.udf(get_bucketnum, pyspark.sql.types.IntegerType())
+    # --------------------------------------------------------------------
 
+
+    # --------------------------------------------------------------------
     def get_bucket_range_str(bucket_num):
         return f"{int(bucket_num * bucket_size)}-{int(bucket_num * bucket_size + bucket_size)}"
 
     bucketrang_udf = f.udf(get_bucket_range_str, pyspark.sql.types.StringType())
+    # --------------------------------------------------------------------
 
-    filteredDF = \
-        inputDF.select \
-        (
-            f.col('date'),
-            f.col('vehicleID'),
-            f.col('latitude'),
-            f.col('longitude')
-        ).where \
-        ( \
-            f.col('date').like(f"{day_picked}%") \
+
+    # Filter only the rows for the date we are looking at
+    # Select only columns:
+    # date, vehicleID, latitude, longitude
+    filteredDF =                                                            \
+        inputDF.select                                                      \
+        (                                                                   \
+            f.col('date'),                                                  \
+            f.col('vehicleID'),                                             \
+            f.col('latitude'),                                              \
+            f.col('longitude')                                              \
+        ).where                                                             \
+        (                                                                   \
+            f.col('date').like(f"{day_picked}%")                            \
         )
     
+    # Group by vehicleID and number the rows for each vehicle's entries
+    # Add the column 'rnum' , this will be used later to calculate the distance
+    # between consecutive rows
     windowSpec = Window.partitionBy('vehicleID').orderBy('date')
     numberedDF = filteredDF.withColumn('rnum', f.row_number().over(windowSpec))
     
@@ -165,9 +181,18 @@ def my_main(spark,
             A.rnum + 1 = B.rnum
         """
 
+    # Cross with itself and join based on two criteria:
+    #
+    # vehicleID1 = vehicleID2
+    # rnum1 + 1 = rnum2
+    #
+    # The second condition ensures only consecutive rows are joined
     joinedDF = spark.sql(join_query)
 
 
+    # Calculate the distance and add it to the table
+    # After that keep only two columns:
+    # vehicleID, distance
     distanceDF = joinedDF                                                   \
                     .withColumn                                             \
                     (                                                       \
@@ -184,12 +209,15 @@ def my_main(spark,
                         f.col('distance')                                   \
                     )
 
+    # Sum the distances to find the total distance for each vehicle
     aggregatedDF = distanceDF                                               \
                         .groupBy('vehicleID')                               \
                         .agg({'distance': 'sum'})                           \
                         .withColumnRenamed('sum(distance)', 'distance')
 
     
+    # Convert the distance to the bucket number
+    # The find the count of each bucket number to form the final histogram
     solutionDF = bucketizedDF = aggregatedDF \
                     .withColumn('bucket_id', bucketnum_udf('distance'))     \
                     .groupBy('bucket_id')                                   \
