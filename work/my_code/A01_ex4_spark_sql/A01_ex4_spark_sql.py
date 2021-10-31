@@ -20,6 +20,57 @@ import pyspark
 import time
 import pyspark.sql.functions as f
 from pyspark.sql.window import Window
+from math import radians, cos, sin, asin, sqrt
+import sys
+import datetime
+
+def haversine_distance(cord1: tuple, cord2: tuple) -> float:
+    longitude1, latitude1 = cord1
+    longitude2, latitude2 = cord2
+    radius_of_earth_km = 6371.0088
+    delta_lat_radians = radians(latitude2 - latitude1)
+    delta_long_radians = radians(longitude2 - longitude1)
+    latitude1 = radians(latitude1)
+    latitude2 = radians(latitude2)
+    a = sin(delta_lat_radians / 2) ** 2 
+    a = a + cos(latitude1) * cos(latitude2) * sin(delta_long_radians / 2) ** 2
+    c = 2 * asin(sqrt(a))
+    return radius_of_earth_km * c
+
+def get_speed(ts1: str, ts2: str, dist:float) -> float:
+    try:
+        dateformat = "%Y-%m-%d %H:%M:%S"
+        t1 = datetime.datetime.strptime(ts1, dateformat)
+        t2 = datetime.datetime.strptime(ts2, dateformat)
+        tt = t2 - t1
+        seconds = abs(tt.total_seconds())
+        return abs(dist) / seconds * 1000
+    except:
+        return sys.float_info.max
+
+def join_segments(first: tuple, second: tuple) -> tuple:
+    if first[1] > second[0]:
+        print(f"Unexpected overlaps between segments {first} {second}")
+        return first 
+    if first[0] > first[1] or second[0] > second[1]:
+        print(f"Segments not properly formed {first} {second}")
+        return first 
+
+    # Swap if first comes after second
+    if first[0] > second[0]:
+        first, second = second, first
+
+    add_distance = haversine_distance(first[3], second[2])
+    speed = get_speed(first[1], second[0], add_distance)
+    add_distance = 0 if speed > max_speed_accepted else add_distance
+
+    return (first[0],  \
+            second[1], \
+            first[2],  \
+            second[3], \
+            first[4] + second[4] + add_distance,)
+
+
 
 # ------------------------------------------
 # FUNCTION my_main
@@ -56,6 +107,25 @@ def my_main(spark,
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
+
+    def get_distance(ts1, lat1, lon1, ts2, lat2, lon2):
+        try:
+            distance = haversine_distance((lon1, lat1,), (lon2, lat2,))
+            speed = get_speed(ts1, ts2, distance)
+            if (speed > max_speed_accepted):
+                return 0.0
+            return distance
+        except Exception as e:
+            print(e)
+            return 0.0
+
+    def get_bucketnum(dist):
+        return int(x // bucket_size)
+
+    def get_bucket_range_str(dist):
+        bucket_num = int(x // bucket_size)
+        return f"{int(bucket_num * bucket_size)}-{int(bucket_num * bucket_size + bucket_size)}"
+
     filteredDF = \
         inputDF.select \
         (
@@ -91,8 +161,27 @@ def my_main(spark,
 
     joinedDF = spark.sql(join_query)
 
+    dist_udf = f.udf(get_distance, pyspark.sql.types.FloatType())
 
+    distanceDF = joinedDF \
+                    .withColumn \
+                    (\
+                        'distance',\
+                        dist_udf \
+                        (\
+                            'date1', 'latitude1', 'longitude1',\
+                            'date2', 'latitude2', 'longitude2',
+                        )\
+                    ).select \
+                    ( \
+                        f.col('vehicleID'), \
+                        f.col('distance') \
+                    )
 
+    bucktnum_udf = f.udf(get_bucketnum, pyspark.sql.types.IntegerType())
+    buctrange_udf = f.udf(get_bucket_range_str, pyspark.sql.types.StringType())
+
+    d = distanceDF
     [print(r) for r in d.collect()]
 
     # ---------------------------------------
