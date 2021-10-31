@@ -75,7 +75,8 @@ def my_main(spark,
         """\
         .format(west, east, south, north, tuple([int(h) for h in hours_list]))
 
-    final_query = """
+    final_query = \
+        """
         SELECT
             hour,
             AVG(congestion) * 100 as percentage,
@@ -88,7 +89,8 @@ def my_main(spark,
         GROUP BY
             hour
         ORDER BY
-            hour"""\
+            hour
+        """\
         .format(inner_filter_query)
 
     solutionDF = spark.sql(final_query)
