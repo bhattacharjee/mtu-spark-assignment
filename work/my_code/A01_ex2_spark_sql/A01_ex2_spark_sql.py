@@ -59,20 +59,19 @@ def my_main(spark,
             + f"    busLineID as lineID, " \
             + f"    closerStopID as stationID, " \
             + f"    date_format(to_timestamp(date), 'HH:mm:ss') as arrivalTime, " \
-            + "    {} as onTime "             \
+            + f"     %d as onTime "             \
             + f"FROM input_tbl " \
             + f"WHERE " \
-            + f"    date LIKE '{day_picked} %' "   \
+            + f"    date LIKE '{day_picked} %s' "   \
             + f"AND atStop = 1 "                                            \
             + f"AND vehicleID = {vehicle_id}   "                            \
-            + "AND delay {} BETWEEN "+ f"{-delay_limit} AND {delay_limit} " \
+            + f"AND (delay %s {-delay_limit} %s delay %s {delay_limit}) " \
             + f"ORDER BY date, vehicleID, busLineID "
-    query1 = qry.format(1, "")
-    query2 = qry.format(0, "")
+    query1 = qry % (1, "%", ">=", "AND", "<=")
+    query2 = qry % (0, "%", "<", "OR", ">")
     union_query = f"({query1}) UNION ({query2}) ORDER BY arrivalTime"
 
-    q = f"select * from ({union_query})"
-    [print(r) for r in spark.sql(q).collect()]
+    solutionDF = spark.sql(union_query).dropDuplicates(['lineID', 'stationID'])
 
     # ---------------------------------------
 
@@ -81,7 +80,6 @@ def my_main(spark,
     for item in resVAL:
         print(item)
 
-#+ f"    CAST(date AS TIMESTAMP) as timestmp, " \
 # --------------------------------------------------------
 #
 # PYTHON PROGRAM EXECUTION
