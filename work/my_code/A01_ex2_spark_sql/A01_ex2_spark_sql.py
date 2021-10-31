@@ -54,6 +54,21 @@ def my_main(spark,
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
+    inputDF.createOrReplaceTempView('input_tbl')
+    query  = "SELECT date, busLineID, vehicleID, {} as onTime "      \
+            + f"FROM input_tbl "                                            \
+            + f"WHERE date LIKE '{day_picked} %' "                          \
+            + f"AND atStop = 1 "                                            \
+            + f"AND vehicleID = {vehicle_id}   "                            \
+            + "AND delay {} BETWEEN "+ f"{-delay_limit} AND {delay_limit} " \
+            + f"ORDER BY date, vehicleID, busLineID "
+    query1 = query.format(1, "")
+    query2 = query.format(0, "")
+    [print(d) for d in spark.sql(query1).collect()]
+    [print(d) for d in spark.sql(query2).collect()]
+    query = f"SELECT FIRST(date), FIRST(busLineID), FIRST(vehicleID), FIRST(onTime) FROM (({query1}) UNION ALL ({query2})) GROUP BY date, busLineID"
+    df = spark.sql(query)
+    [print(d) for d in df.collect()]
 
 
     # ---------------------------------------
@@ -91,7 +106,7 @@ if __name__ == '__main__':
     my_databricks_path = "/"
 
     my_dataset_dir = "FileStore/tables/6_Assignments/my_dataset_complete/"
-    #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_1/"
+    my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_3/"
 
