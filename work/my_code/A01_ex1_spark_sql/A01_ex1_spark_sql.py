@@ -56,6 +56,24 @@ def my_main(spark,
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
+    inputDF.createOrReplaceTempView('input_tbl')
+    west, east = min(west, east), max(west, east)
+    south, north = min(south, north), max(south, north)
+    inner_filter_by_weekday_and_coordinates_query =                         \
+            'SELECT hour(date) AS hour, congestion '                        \
+            + f'FROM input_tbl '                                            \
+            + f'WHERE dayofweek(date) > 1 AND dayofweek(date) < 7 AND '     \
+            + f'longitude >= {west} AND longitude <= {east} AND '           \
+            + f'latitude >= {south} AND latitude <= {north} AND '           \
+            + f'hour(date) IN {tuple([int(h) for h in hours_list])}'
+    final_query =                                                           \
+            f'SELECT hour, '                                                \
+            + f'AVG(congestion) * 100 AS percentage, '                      \
+            + f'COUNT(*) AS numMeasurements, '                              \
+            + f'SUM(congestion) AS congestionMeasurements '                 \
+            + f'FROM ({inner_filter_by_weekday_and_coordinates_query}) '    \
+            + f'GROUP BY hour ORDER BY hour'
+    solutionDF = spark.sql(final_query)
 
 
     # ---------------------------------------
@@ -104,11 +122,11 @@ if __name__ == '__main__':
     else:
         my_dataset_dir = my_databricks_path + my_dataset_dir
 
-    print(my_dataset_dir)
     # 4. We configure the Spark Session
-    spark = pyspark.sql.SparkSession.builder.getOrCreate()
+    spark = pyspark.sql.SparkSession.builder.config("spark.executor.memory", "8g").getOrCreate()
     spark.sparkContext.setLogLevel('WARN')
     print("\n\n\n")
+
 
     # 5. We call to our main function
     start_time = time.time()
