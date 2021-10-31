@@ -57,20 +57,40 @@ def my_main(spark,
     # TO BE COMPLETED
     # ---------------------------------------
     inputDF.createOrReplaceTempView('input_tbl')
-    inner_filter_by_weekday_and_coordinates_query =                         \
-            'SELECT hour(date) AS hour, congestion '                        \
-            + f'FROM input_tbl '                                            \
-            + f'WHERE dayofweek(date) BETWEEN 2 AND 6 AND '                 \
-            + f'longitude BETWEEN {west} AND {east} AND '                   \
-            + f'latitude BETWEEN {south} AND {north} AND '                  \
-            + f'hour(date) IN {tuple([int(h) for h in hours_list])}'
-    final_query =                                                           \
-            f'SELECT hour, '                                                \
-            + f'AVG(congestion) * 100 AS percentage, '                      \
-            + f'COUNT(*) AS numMeasurements, '                              \
-            + f'SUM(congestion) AS congestionMeasurements '                 \
-            + f'FROM ({inner_filter_by_weekday_and_coordinates_query}) '    \
-            + f'GROUP BY hour ORDER BY hour'
+    inner_filter_query = \
+        """
+                SELECT
+                    hour(date) as hour,
+                    congestion
+                FROM
+                    input_tbl
+                WHERE
+                    dayofweek(date) BETWEEN 2 AND 6
+                    AND
+                    longitude BETWEEN {} AND {}
+                    AND
+                    LATITUDE BETWEEN {} AND {}
+                    AND
+                    hour(date) in {}
+        """\
+        .format(west, east, south, north, tuple([int(h) for h in hours_list]))
+
+    final_query = """
+        SELECT
+            hour,
+            AVG(congestion) * 100 as percentage,
+            COUNT(congestion) as numMeasurements,
+            SUM(congestion) as congestionMeasurements
+        FROM
+            (
+            {}
+            )
+        GROUP BY
+            hour
+        ORDER BY
+            hour"""\
+        .format(inner_filter_query)
+
     solutionDF = spark.sql(final_query)
 
 
