@@ -55,21 +55,24 @@ def my_main(spark,
     # TO BE COMPLETED
     # ---------------------------------------
     inputDF.createOrReplaceTempView('input_tbl')
-    qry = "SELECT date, busLineID, vehicleID, closerStopID, {} as onTime "  \
-            + f"FROM input_tbl "                                            \
-            + f"WHERE date LIKE '{day_picked} %' "                          \
+    qry = "SELECT "\
+            + f"    busLineID as lineID, " \
+            + f"    closerStopID as stationID, " \
+            + f"    date_format(to_timestamp(date), 'HH:mm:ss') as arrivalTime, " \
+            + "    {} as onTime "             \
+            + f"FROM input_tbl " \
+            + f"WHERE " \
+            + f"    date LIKE '{day_picked} %' "   \
             + f"AND atStop = 1 "                                            \
             + f"AND vehicleID = {vehicle_id}   "                            \
             + "AND delay {} BETWEEN "+ f"{-delay_limit} AND {delay_limit} " \
             + f"ORDER BY date, vehicleID, busLineID "
     query1 = qry.format(1, "")
     query2 = qry.format(0, "")
-    [print(d) for d in spark.sql(query1).collect()]
-    [print(d) for d in spark.sql(query2).collect()]
-    query = f"SELECT FIRST(date), FIRST(busLineID), FIRST(vehicleID), FIRST(onTime) FROM (({query1}) UNION ALL ({query2})) GROUP BY date, busLineID"
-    df = spark.sql(query)
-    [print(d) for d in df.collect()]
+    union_query = f"({query1}) UNION ({query2}) ORDER BY arrivalTime"
 
+    q = f"select * from ({union_query})"
+    [print(r) for r in spark.sql(q).collect()]
 
     # ---------------------------------------
 
@@ -78,6 +81,7 @@ def my_main(spark,
     for item in resVAL:
         print(item)
 
+#+ f"    CAST(date AS TIMESTAMP) as timestmp, " \
 # --------------------------------------------------------
 #
 # PYTHON PROGRAM EXECUTION
