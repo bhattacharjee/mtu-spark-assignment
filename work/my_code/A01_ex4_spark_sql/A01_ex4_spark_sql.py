@@ -120,10 +120,9 @@ def my_main(spark,
             return 0.0
 
     def get_bucketnum(dist):
-        return int(x // bucket_size)
+        return int(dist // bucket_size)
 
-    def get_bucket_range_str(dist):
-        bucket_num = int(x // bucket_size)
+    def get_bucket_range_str(bucket_num):
         return f"{int(bucket_num * bucket_size)}-{int(bucket_num * bucket_size + bucket_size)}"
 
     filteredDF = \
@@ -178,11 +177,30 @@ def my_main(spark,
                         f.col('distance') \
                     )
 
-    bucktnum_udf = f.udf(get_bucketnum, pyspark.sql.types.IntegerType())
-    buctrange_udf = f.udf(get_bucket_range_str, pyspark.sql.types.StringType())
+    aggregatedDF = distanceDF \
+                        .groupBy('vehicleID') \
+                        .agg({'distance': 'sum'}) \
+                        .withColumnRenamed('sum(distance)', 'distance')
+    [print(x) for x in aggregatedDF.collect()]
+    print('------')
 
-    d = distanceDF
-    [print(r) for r in d.collect()]
+    bucketnum_udf = f.udf(get_bucketnum, pyspark.sql.types.IntegerType())
+    bucketrang_udf = f.udf(get_bucket_range_str, pyspark.sql.types.StringType())
+    
+    solutionDF = bucketizedDF = aggregatedDF \
+                    .withColumn('bucket_id', bucketnum_udf('distance'))     \
+                    .withColumn('bucket_size', bucketrang_udf('distance'))  \
+                    .groupBy('bucket_id')                                   \
+                    .agg({'vehicleID': 'count'})                            \
+                    .withColumnRenamed('count(vehicleID)', 'num_vehicles')  \
+                    .withColumn('bucket_size', bucketrang_udf('bucket_id')) \
+                    .select                                                 \
+                    (                                                       \
+                        f.col('bucket_id'),                                 \
+                        f.col('bucket_size'),                               \
+                        f.col('num_vehicles')                               \
+                    )
+
 
     # ---------------------------------------
 
