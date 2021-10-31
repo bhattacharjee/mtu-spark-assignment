@@ -55,20 +55,27 @@ def my_main(spark,
     # TO BE COMPLETED
     # ---------------------------------------
     inputDF.createOrReplaceTempView('input_tbl')
-    qry = "SELECT date, busLineID, vehicleID, closerStopID, {} as onTime "  \
+    qry  = "SELECT date, busLineID, vehicleID, closerStopID, {} as onTime " \
             + f"FROM input_tbl "                                            \
-            + f"WHERE date LIKE '{day_picked} %' "                          \
+            + f"WHERE date LIKE '{day_picked}' "                          \
             + f"AND atStop = 1 "                                            \
             + f"AND vehicleID = {vehicle_id}   "                            \
             + "AND delay {} BETWEEN "+ f"{-delay_limit} AND {delay_limit} " \
             + f"ORDER BY date, vehicleID, busLineID "
-    query1 = qry.format(1, "")
-    query2 = qry.format(0, "")
-    [print(d) for d in spark.sql(query1).collect()]
-    [print(d) for d in spark.sql(query2).collect()]
-    query = f"SELECT FIRST(date), FIRST(busLineID), FIRST(vehicleID), FIRST(onTime) FROM (({query1}) UNION ALL ({query2})) GROUP BY date, busLineID"
+    qry1 = qry.format(1, "")
+    qry2 = qry.format(0, "")
+    query = f"SELECT *"                                                      \
+            + f"FROM "                                                      \
+            + f"    (({qry1}) UNION ({qry2})) "                             \
+            + f"GROUP BY date, buslineid "  
+
+    print(qry1)
+    [print(r) for r in spark.sql(qry1).collect()]
+    """
     df = spark.sql(query)
+    print(df)
     [print(d) for d in df.collect()]
+    """
 
 
     # ---------------------------------------
