@@ -181,8 +181,6 @@ def my_main(spark,
                         .groupBy('vehicleID') \
                         .agg({'distance': 'sum'}) \
                         .withColumnRenamed('sum(distance)', 'distance')
-    [print(x) for x in aggregatedDF.collect()]
-    print('------')
 
     bucketnum_udf = f.udf(get_bucketnum, pyspark.sql.types.IntegerType())
     bucketrang_udf = f.udf(get_bucket_range_str, pyspark.sql.types.StringType())
@@ -199,7 +197,8 @@ def my_main(spark,
                         f.col('bucket_id'),                                 \
                         f.col('bucket_size'),                               \
                         f.col('num_vehicles')                               \
-                    )
+                    )                                                       \
+                    .orderBy('bucket_id')
 
 
     # ---------------------------------------
@@ -237,7 +236,7 @@ if __name__ == '__main__':
     my_databricks_path = "/"
 
     my_dataset_dir = "FileStore/tables/6_Assignments/my_dataset_complete/"
-    my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_1/"
+    #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_3/"
 
