@@ -18,6 +18,7 @@
 
 import pyspark
 import time
+import datetime
 
 # ------------------------------------------
 # FUNCTION my_main
@@ -48,6 +49,44 @@ def my_main(spark, my_dataset_dir, current_time, seconds_horizon):
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
+    def get_end_time(current_time:str, seconds_horizon:int) -> str:
+        dateformat = "%Y-%m-%d %H:%M:%S"
+        d = datetime.datetime.strptime(current_time, dateformat)
+        d = d + datetime.timedelta(seconds=seconds_horizon)
+        return d.strftime(dateformat)
+    end_time = get_end_time(current_time, seconds_horizon)
+
+    inputDF.createOrReplaceTempView('input_tbl')
+    query = \
+            f"SELECT DISTINCT " +\
+            f"  closerStopID as stationID, vehicleID " +\
+            f"FROM " +\
+            f"  input_tbl " +\
+            f"WHERE " +\
+            f"  date >= '{current_time}' AND date <= '{end_time}' " +\
+            f"  AND atStop = 1 "
+    agg_query = \
+            f"SELECT " +\
+            f"  stationID, " +\
+            f"  count(vehicleId) AS vehicleCount, " +\
+            f"  sort_array(collect_set(vehicleId)) as sortedvehicleIDList " +\
+            f"FROM" +\
+            f"  ({query})" +\
+            f"GROUP BY stationID"
+
+    spark.sql(agg_query).createOrReplaceTempView('aggregated_tbl')
+
+    max_len_query = \
+            f"SELECT MAX(vehicleCount) as maxlen FROM aggregated_tbl"
+    maxlen = spark.sql(max_len_query).collect()[0]['maxlen']
+
+    final_select_query = \
+            f"SELECT stationID, sortedvehicleIDList " + \
+            f"FROM aggregated_tbl " + \
+            f"WHERE vehicleCount = {maxlen}"
+
+    solutionDF = spark.sql(final_select_query)
+
 
 
     # ---------------------------------------
