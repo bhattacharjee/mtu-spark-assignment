@@ -57,14 +57,12 @@ def my_main(spark,
     # TO BE COMPLETED
     # ---------------------------------------
     inputDF.createOrReplaceTempView('input_tbl')
-    west, east = min(west, east), max(west, east)
-    south, north = min(south, north), max(south, north)
     inner_filter_by_weekday_and_coordinates_query =                         \
             'SELECT hour(date) AS hour, congestion '                        \
             + f'FROM input_tbl '                                            \
-            + f'WHERE dayofweek(date) > 1 AND dayofweek(date) < 7 AND '     \
-            + f'longitude >= {west} AND longitude <= {east} AND '           \
-            + f'latitude >= {south} AND latitude <= {north} AND '           \
+            + f'WHERE dayofweek(date) BETWEEN 2 AND 6 AND '                 \
+            + f'longitude BETWEEN {west} AND {east} AND '                   \
+            + f'latitude BETWEEN {south} AND {north} AND '                  \
             + f'hour(date) IN {tuple([int(h) for h in hours_list])}'
     final_query =                                                           \
             f'SELECT hour, '                                                \
