@@ -70,7 +70,7 @@ def my_main(spark,
             + f"ORDER BY date, vehicleID, busLineID "
     query1 = qry % (1, "%", ">=", "AND", "<=")
     query2 = qry % (0, "%", "<", "OR", ">")
-    union_query = f"({query1}) UNION ({query2}) ORDER BY arrivalTime"
+    union_query = f"SELECT * FROM ({query1}) UNION ({query2}) ORDER BY arrivalTime"
 
     solutionDF = spark.sql(union_query).dropDuplicates(['lineID', 'stationID'])
     solutionDF = solutionDF.orderBy(f.col('arrivalTime'))
