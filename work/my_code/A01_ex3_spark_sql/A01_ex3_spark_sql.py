@@ -57,33 +57,35 @@ def my_main(spark, my_dataset_dir, current_time, seconds_horizon):
     end_time = get_end_time(current_time, seconds_horizon)
 
     inputDF.createOrReplaceTempView('input_tbl')
-    query = \
-            f"SELECT DISTINCT " +\
-            f"  closerStopID as stationID, vehicleID " +\
-            f"FROM " +\
-            f"  input_tbl " +\
-            f"WHERE " +\
-            f"  date >= '{current_time}' AND date <= '{end_time}' " +\
+    query =                                                                 \
+            f"SELECT DISTINCT " +                                           \
+            f"  closerStopID as stationID, vehicleID " +                    \
+            f"FROM " +                                                      \
+            f"  input_tbl " +                                               \
+            f"WHERE " +                                                     \
+            f"  date >= '{current_time}' AND date <= '{end_time}' " +       \
             f"  AND atStop = 1 "
-    agg_query = \
-            f"SELECT " +\
-            f"  stationID, " +\
-            f"  count(vehicleId) AS vehicleCount, " +\
-            f"  sort_array(collect_set(vehicleId)) as sortedvehicleIDList " +\
-            f"FROM" +\
-            f"  ({query})" +\
+    agg_query =                                                             \
+            f"SELECT " +                                                    \
+            f"  stationID, " +                                              \
+            f"  count(vehicleId) AS vehicleCount, " +                       \
+            f"  sort_array(collect_set(vehicleId)) as sortedvehicleIDList "+\
+            f"FROM" +                                                       \
+            f"  ({query})" +                                                \
             f"GROUP BY stationID"
 
     spark.sql(agg_query).createOrReplaceTempView('aggregated_tbl')
 
-    max_len_query = \
+    max_len_query =                                                         \
             f"SELECT MAX(vehicleCount) as maxlen FROM aggregated_tbl"
-    maxlen = spark.sql(max_len_query).collect()[0]['maxlen']
+    spark.sql(max_len_query).createOrReplaceTempView('max_tbl')
 
-    final_select_query = \
-            f"SELECT stationID, sortedvehicleIDList " + \
-            f"FROM aggregated_tbl " + \
-            f"WHERE vehicleCount = {maxlen}"
+    # This join is inexpensive as max_tbl has just one row and one column
+    final_select_query =                                                    \
+            f"SELECT stationID, sortedvehicleIDList " +                     \
+            f"FROM " +                                                      \
+            f"  (aggregated_tbl FULL OUTER JOIN max_tbl) " +                \
+            f"WHERE vehicleCount = maxlen"
 
     solutionDF = spark.sql(final_select_query)
 
@@ -123,7 +125,7 @@ if __name__ == '__main__':
     my_databricks_path = "/"
 
     my_dataset_dir = "FileStore/tables/6_Assignments/my_dataset_complete/"
-    #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex3_micro_dataset_1/"
+    my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex3_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex3_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex3_micro_dataset_3/"
 
