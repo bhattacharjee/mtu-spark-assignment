@@ -56,21 +56,41 @@ def my_main(spark,
     # TO BE COMPLETED
     # ---------------------------------------
     inputDF.createOrReplaceTempView('input_tbl')
-    qry = "SELECT "\
-            + f"    busLineID as lineID, " \
-            + f"    closerStopID as stationID, " \
-            + f"    date_format(to_timestamp(date), 'HH:mm:ss') as arrivalTime, " \
-            + f"     %d as onTime "             \
-            + f"FROM input_tbl " \
-            + f"WHERE " \
-            + f"    date LIKE '{day_picked} %s' "   \
-            + f"AND atStop = 1 "                                            \
-            + f"AND vehicleID = {vehicle_id}   "                            \
-            + f"AND (delay %s {-delay_limit} %s delay %s {delay_limit}) " \
-            + f"ORDER BY date, vehicleID, busLineID "
+    qry = """
+                SELECT
+                    busLineID as lineID,
+                    closerStopID as stationID,
+                    date_format(to_timestamp(date), 'HH:mm:ss') as arrivalTime,
+                    %d as onTime
+                FROM
+                    input_tbl
+                WHERE
+                    date like '{} %s'
+                    AND
+                    atStop = 1
+                    AND
+                    vehicleID = {}
+                    AND
+                    (delay %s {} %s delay %s {})
+                ORDER BY
+                    date, vehicleID, busLineID """\
+            .format(day_picked, vehicle_id, -delay_limit, delay_limit)
+
     query1 = qry % (1, "%", ">=", "AND", "<=")
     query2 = qry % (0, "%", "<", "OR", ">")
-    union_query = f"SELECT * FROM ({query1}) UNION ({query2}) ORDER BY arrivalTime"
+    union_query = """
+        SELECT
+            *
+        FROM
+            (
+            {}
+            )
+            UNION
+            (
+            {}
+            )
+        ORDER BY
+            arrivalTime""".format(query1, query2)
 
     solutionDF = spark.sql(union_query).dropDuplicates(['lineID', 'stationID'])
     solutionDF = solutionDF.orderBy(f.col('arrivalTime'))
