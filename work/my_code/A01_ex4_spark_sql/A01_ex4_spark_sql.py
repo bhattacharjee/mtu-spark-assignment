@@ -18,6 +18,8 @@
 
 import pyspark
 import time
+import pyspark.sql.functions as f
+from pyspark.sql.window import Window
 
 # ------------------------------------------
 # FUNCTION my_main
@@ -33,7 +35,7 @@ def my_main(spark,
     my_schema = pyspark.sql.types.StructType(
         [pyspark.sql.types.StructField("date", pyspark.sql.types.StringType(), False),
          pyspark.sql.types.StructField("busLineID", pyspark.sql.types.IntegerType(), False),
-         pyspark.sql.types.StructField("busLinePatternID", pyspark.sql.types.StringType(), False),
+         pyspark.sql.types.StructField("busLinePatternumID", pyspark.sql.types.StringType(), False),
          pyspark.sql.types.StructField("congestion", pyspark.sql.types.IntegerType(), False),
          pyspark.sql.types.StructField("longitude", pyspark.sql.types.FloatType(), False),
          pyspark.sql.types.StructField("latitude", pyspark.sql.types.FloatType(), False),
@@ -54,7 +56,44 @@ def my_main(spark,
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
+    filteredDF = \
+        inputDF.select \
+        (
+            f.col('date'),
+            f.col('vehicleID'),
+            f.col('latitude'),
+            f.col('longitude')
+        ).where \
+        ( \
+            f.col('date').like(f"{day_picked}%") \
+        )
+    
+    windowSpec = Window.partitionBy('vehicleID').orderBy('date')
+    numberedDF = filteredDF.withColumn('rnum', f.row_number().over(windowSpec))
+    
+    numberedDF.createOrReplaceTempView('base_tbl')
 
+    join_query = """
+        SELECT
+            A.vehicleID     AS vehicleID,
+            A.date          AS date1,
+            A.latitude      AS latitude1,
+            A.longitude     AS longitude1,
+            B.date          AS date2,
+            B.latitude      AS latitude2,
+            B.longitude     AS longitude2
+        FROM
+            base_tbl A,
+            base_tbl B
+        WHERE
+            A.vehicleID = B.vehicleID AND
+            A.rnum + 1 = B.rnum"""
+
+    joinedDF = spark.sql(join_query)
+
+
+
+    [print(r) for r in d.collect()]
 
     # ---------------------------------------
 
@@ -91,7 +130,7 @@ if __name__ == '__main__':
     my_databricks_path = "/"
 
     my_dataset_dir = "FileStore/tables/6_Assignments/my_dataset_complete/"
-    #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_1/"
+    my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_3/"
 
