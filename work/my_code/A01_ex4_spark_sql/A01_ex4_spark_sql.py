@@ -119,11 +119,17 @@ def my_main(spark,
             print(e)
             return 0.0
 
+    dist_udf = f.udf(get_distance, pyspark.sql.types.FloatType())
+
     def get_bucketnum(dist):
         return int(dist // bucket_size)
 
+    bucketnum_udf = f.udf(get_bucketnum, pyspark.sql.types.IntegerType())
+
     def get_bucket_range_str(bucket_num):
         return f"{int(bucket_num * bucket_size)}-{int(bucket_num * bucket_size + bucket_size)}"
+
+    bucketrang_udf = f.udf(get_bucket_range_str, pyspark.sql.types.StringType())
 
     filteredDF = \
         inputDF.select \
@@ -156,38 +162,36 @@ def my_main(spark,
             base_tbl B
         WHERE
             A.vehicleID = B.vehicleID AND
-            A.rnum + 1 = B.rnum"""
+            A.rnum + 1 = B.rnum
+        """
 
     joinedDF = spark.sql(join_query)
 
-    dist_udf = f.udf(get_distance, pyspark.sql.types.FloatType())
 
-    distanceDF = joinedDF \
-                    .withColumn \
-                    (\
-                        'distance',\
-                        dist_udf \
-                        (\
-                            'date1', 'latitude1', 'longitude1',\
-                            'date2', 'latitude2', 'longitude2',
-                        )\
-                    ).select \
-                    ( \
-                        f.col('vehicleID'), \
-                        f.col('distance') \
+    distanceDF = joinedDF                                                   \
+                    .withColumn                                             \
+                    (                                                       \
+                        'distance',                                         \
+                        dist_udf                                            \
+                        (                                                   \
+                            'date1', 'latitude1', 'longitude1',             \
+                            'date2', 'latitude2', 'longitude2',             \
+                        )                                                   \
+                    )                                                       \
+                    .select                                                 \
+                    (                                                       \
+                        f.col('vehicleID'),                                 \
+                        f.col('distance')                                   \
                     )
 
-    aggregatedDF = distanceDF \
-                        .groupBy('vehicleID') \
-                        .agg({'distance': 'sum'}) \
+    aggregatedDF = distanceDF                                               \
+                        .groupBy('vehicleID')                               \
+                        .agg({'distance': 'sum'})                           \
                         .withColumnRenamed('sum(distance)', 'distance')
 
-    bucketnum_udf = f.udf(get_bucketnum, pyspark.sql.types.IntegerType())
-    bucketrang_udf = f.udf(get_bucket_range_str, pyspark.sql.types.StringType())
     
     solutionDF = bucketizedDF = aggregatedDF \
                     .withColumn('bucket_id', bucketnum_udf('distance'))     \
-                    .withColumn('bucket_size', bucketrang_udf('distance'))  \
                     .groupBy('bucket_id')                                   \
                     .agg({'vehicleID': 'count'})                            \
                     .withColumnRenamed('count(vehicleID)', 'num_vehicles')  \
