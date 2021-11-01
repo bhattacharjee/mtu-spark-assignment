@@ -56,6 +56,10 @@ def my_main(spark,
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
+    def tostr(x):
+        return f"{x:02d}"
+    spark.udf.register('TOSTR', tostr, pyspark.sql.types.StringType())
+
     inputDF.createOrReplaceTempView('input_tbl')
     inner_filter_query = \
         """
@@ -78,8 +82,8 @@ def my_main(spark,
     final_query = \
         """
         SELECT
-            hour,
-            AVG(congestion) * 100 as percentage,
+            TOSTR(hour) as hour,
+            ROUND(AVG(congestion) * 100, 2) AS percentage,
             COUNT(congestion) as numMeasurements,
             SUM(congestion) as congestionMeasurements
         FROM
@@ -89,7 +93,7 @@ def my_main(spark,
         GROUP BY
             hour
         ORDER BY
-            hour
+            percentage DESC
         """\
         .format(inner_filter_query)
 
@@ -133,7 +137,7 @@ if __name__ == '__main__':
     my_databricks_path = "/"
 
     my_dataset_dir = "FileStore/tables/6_Assignments/my_dataset_complete/"
-    #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_1/"
+    my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_3/"
 
@@ -161,4 +165,4 @@ if __name__ == '__main__':
            )
 
     total_time = time.time() - start_time
-    print("Total time = " + str(total_time))
+    #print("Total time = " + str(total_time))
