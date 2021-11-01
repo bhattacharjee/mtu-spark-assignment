@@ -21,6 +21,7 @@
 # ------------------------------------------
 import sys
 import codecs
+import os
 
 # ------------------------------------------
 # FUNCTION pass_test_single_file
@@ -74,6 +75,15 @@ def my_main(my_file_1, my_file_2):
     content_1 = [line.strip().replace(" ", "") for line in my_input_stream_1 if line != "\n"]
     content_2 = [line.strip().replace(" ", "") for line in my_input_stream_2 if line != "\n"]
 
+    #content_1 = [x for x in content_1 if not x.startswith('Totaltime')]
+    #content_2 = [x for x in content_2 if not x.startswith('Totaltime')]
+
+    """
+    print(content_1)
+    print('-' * 80)
+    print(content_2)
+    """
+
     # 4. We close the files
     my_input_stream_1.close()
     my_input_stream_2.close()
@@ -87,10 +97,15 @@ def my_main(my_file_1, my_file_2):
         for index in range(size_1):
             if (content_1[index] != content_2[index]):
                 res = False
+                print(f"Expected: {content_1[index]}")
+                print(f"Got     : {content_2[index]}")
+                os.system(f"vimdiff {my_file_1} {my_file_2}")
                 break
 
     # 5.2. If the files have different lengths then they are definitely not equal
     else:
+        print(f"lengths do not match, expected = {size_1} got = {len(content_2)}")
+        os.system(f"vimdiff {my_file_1} {my_file_2}")
         res = False
 
     # 6. Print the final outcome
@@ -110,8 +125,9 @@ def my_main(my_file_1, my_file_2):
 # ---------------------------------------------------------------
 if __name__ == '__main__':
     # 1. We get the input values
-    solution_file_name = "A01_ex1_spark_core_small_dataset.txt"
-    student_file_name = "A01_ex1_spark_core_dataset_1.txt"
+    solution_file_name = "A01_ex4_spark_sql_entire_dataset.txt"
+    student_file_name = "/home/phantom/mtu_spark_assignment_1/work/my_code/" +\
+            "A01_ex4_spark_sql/small.txt"
 
     # 1.1. If the program is called from console, we modify the parameters
     if (len(sys.argv) > 1):
@@ -121,7 +137,8 @@ if __name__ == '__main__':
 
     # 2. We get the folders to explore
     assignment_solution_file = "./Assignment_Solutions/" + solution_file_name
-    student_solution_file = "./Student_Solutions/" + student_file_name
+    #student_solution_file = "./Student_Solutions/" + student_file_name
+    student_solution_file = student_file_name
 
     # 3. We call to my_main
     my_main(assignment_solution_file, student_solution_file)
