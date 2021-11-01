@@ -135,7 +135,7 @@ def my_main(spark,
 
     # --------------------------------------------------------------------
     def get_bucket_range_str(bucket_num):
-        return f"{int(bucket_num * bucket_size)}-{int(bucket_num * bucket_size + bucket_size)}"
+        return f"{int(bucket_num * bucket_size)}_{int(bucket_num * bucket_size + bucket_size)}"
 
     bucketrang_udf = f.udf(get_bucket_range_str, pyspark.sql.types.StringType())
     # --------------------------------------------------------------------
@@ -293,4 +293,4 @@ if __name__ == '__main__':
            )
 
     total_time = time.time() - start_time
-    print("Total time = " + str(total_time))
+    #print("Total time = " + str(total_time))

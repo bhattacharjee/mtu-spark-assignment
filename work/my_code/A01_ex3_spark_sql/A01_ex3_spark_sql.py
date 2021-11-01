@@ -90,6 +90,8 @@ def my_main(spark, my_dataset_dir, current_time, seconds_horizon):
                 (aggregated_tbl FULL OUTER JOIN max_tbl)
             WHERE
                 vehicleCount = maxlen
+            ORDER BY
+                stationID ASC
             """
 
     solutionDF = spark.sql(final_select_query)
@@ -130,7 +132,7 @@ if __name__ == '__main__':
     my_databricks_path = "/"
 
     my_dataset_dir = "FileStore/tables/6_Assignments/my_dataset_complete/"
-    my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex3_micro_dataset_1/"
+    #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex3_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex3_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex3_micro_dataset_3/"
 
