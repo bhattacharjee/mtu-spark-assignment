@@ -156,7 +156,7 @@ def my_main(sc,
     # >>----------------------------------------------------
     def get_initial_bucket(x: float):
         bucket_num = int(x // bucket_size)
-        bucket_range = f"{int(bucket_num * bucket_size)}-{int(bucket_num * bucket_size + bucket_size)}"
+        bucket_range = f"{int(bucket_num * bucket_size)}_{int(bucket_num * bucket_size + bucket_size)}"
         return (bucket_num, (bucket_num, bucket_range, 1))
     # <<----------------------------------------------------
 
@@ -168,7 +168,6 @@ def my_main(sc,
     # ---------------------------------------
 
     # Operation A1: 'collect'
-    print(solutionRDD)
     resVAL = solutionRDD.collect()
     for item in resVAL:
         print(item)
@@ -200,7 +199,6 @@ if __name__ == '__main__':
 
     # 3. We set the path to my_dataset and my_result
     my_local_path = "../../../../3_Code_Examples/L07-23_Spark_Environment/"
-    my_local_path = ""
     my_databricks_path = "/"
 
     my_dataset_dir = "FileStore/tables/6_Assignments/my_dataset_complete/"
@@ -208,7 +206,6 @@ if __name__ == '__main__':
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex4_micro_dataset_3/"
     #my_dataset_dir = "/home/phantom/nacho_assignment/data/A01_ex4_micro_dataset_1"
-    my_dataset_dir = "/home/phantom/nacho_assignment/data/my_dataset_complete"
 
     if local_False_databricks_True == False:
         my_dataset_dir = my_local_path + my_dataset_dir
@@ -231,4 +228,4 @@ if __name__ == '__main__':
            )
 
     total_time = time.time() - start_time
-    print("Total time = " + str(total_time))
+    #print("Total time = " + str(total_time))
