@@ -152,7 +152,7 @@ def get_hour(row):
 
 def get_percentage(x):
     try:
-        return x[0] * 100 / x[1]
+        return round(x[0] * 100 / x[1], 2)
     except:
         return 0.0
 
@@ -244,8 +244,8 @@ if __name__ == '__main__':
     my_local_path = "../../../../3_Code_Examples/L07-23_Spark_Environment/"
     my_databricks_path = "/"
 
-    #my_dataset_dir = "FileStore/tables/6_Assignments/my_dataset_complete/"
-    my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_1/"
+    my_dataset_dir = "FileStore/tables/6_Assignments/my_dataset_complete/"
+    #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_3/"
 
@@ -273,4 +273,4 @@ if __name__ == '__main__':
            )
 
     total_time = time.time() - start_time
-    print("Total time = " + str(total_time))
+    #print("Total time = " + str(total_time))
