@@ -160,7 +160,8 @@ if __name__ == '__main__':
     my_local_path = "../../../../3_Code_Examples/L07-23_Spark_Environment/"
     my_databricks_path = "/"
 
-    #my_dataset_dir = "FileStore/tables/6_Assignments/my_dataset_complete/"
+    my_dataset_dir = "FileStore/tables/6_Assignments/my_dataset_complete/"
+    my_dataset_dir = "FileStore/tables/6_Assignments/temp/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_3/"
