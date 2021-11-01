@@ -150,4 +150,4 @@ if __name__ == '__main__':
     my_main(spark, my_dataset_dir, vehicle_id, day_picked, delay_limit)
 
     total_time = time.time() - start_time
-    print("Total time = " + str(total_time))
+    #print("Total time = " + str(total_time))
