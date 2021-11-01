@@ -137,7 +137,7 @@ if __name__ == '__main__':
     my_databricks_path = "/"
 
     my_dataset_dir = "FileStore/tables/6_Assignments/my_dataset_complete/"
-    my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_1/"
+    #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex1_micro_dataset_3/"
 
