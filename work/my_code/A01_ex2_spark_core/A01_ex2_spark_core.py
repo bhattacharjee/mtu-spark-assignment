@@ -164,12 +164,9 @@ if __name__ == '__main__':
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_3/"
-    #my_dataset_dir = "/home/phantom/nacho_assignment/data/A01_ex2_micro_dataset_1"
-    my_dataset_dir = "/home/phantom/nacho_assignment/data/my_dataset_complete"
 
     if local_False_databricks_True == False:
-        #my_dataset_dir = my_local_path + my_dataset_dir
-        my_dataset_dir = my_dataset_dir
+        my_dataset_dir = my_local_path + my_dataset_dir
     else:
         my_dataset_dir = my_databricks_path + my_dataset_dir
 
@@ -184,4 +181,4 @@ if __name__ == '__main__':
     my_main(sc, my_dataset_dir, vehicle_id, day_picked, delay_limit)
 
     total_time = time.time() - start_time
-    print("Total time = " + str(total_time))
+    #print("Total time = " + str(total_time))
