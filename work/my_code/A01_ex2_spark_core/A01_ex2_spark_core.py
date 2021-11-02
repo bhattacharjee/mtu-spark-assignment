@@ -102,12 +102,12 @@ def my_main(sc,
 
     # Discard fields that we do not need to make it faster
     filteredRDD = filteredRDD\
-                    .map(lambda x: (x[0], x[1], x[6], x[8]))\
-                    .sortBy(lambda x: x[0])
+                    .map(lambda x: (x[0], x[1], x[6], x[8]))
 
     # Add a row number at the end of each tuple
     # This is expensive
     filteredRDD = filteredRDD\
+                    .sortBy(lambda x: x[0])\
                     .zipWithIndex()\
                     .map(lambda x: x[0] + (x[1],))
 
@@ -125,17 +125,15 @@ def my_main(sc,
                         or \
                         (x[0][4] == 0 and x[1][4] == 0))
 
-    smallerRDD = consecutiveDuplicatesRemoved.map(lambda x: (x[1][0], x[1][1], x[1][2], x[1][3],))
-
 
     # In the remapped tuple x[8] is now x[3] and x[6] is now x[2]
     # Reorder the tuple to match the output form, also discard the date
-    solutionRDD = smallerRDD.map(\
+    solutionRDD = consecutiveDuplicatesRemoved.map(\
             lambda x: ( \
-                    x[1],\
-                    x[3],\
-                    x[0].split(" ")[1],\
-                    1 if abs(x[2]) <= delay_limit else 0))
+                    x[1][1],\
+                    x[1][3],\
+                    x[1][0].split(" ")[1],\
+                    1 if abs(x[1][2]) <= delay_limit else 0))
 
     # ---------------------------------------
 
