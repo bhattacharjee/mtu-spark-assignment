@@ -18,6 +18,7 @@
 
 import pyspark
 import time
+import pyspark.sql.functions as f
 
 # ------------------------------------------
 # FUNCTION my_main
@@ -55,28 +56,44 @@ def my_main(spark,
     # TO BE COMPLETED
     # ---------------------------------------
     inputDF.createOrReplaceTempView('input_tbl')
-    qry  = "SELECT date, busLineID, vehicleID, closerStopID, {} as onTime " \
-            + f"FROM input_tbl "                                            \
-            + f"WHERE date LIKE '{day_picked}' "                          \
-            + f"AND atStop = 1 "                                            \
-            + f"AND vehicleID = {vehicle_id}   "                            \
-            + "AND delay {} BETWEEN "+ f"{-delay_limit} AND {delay_limit} " \
-            + f"ORDER BY date, vehicleID, busLineID "
-    qry1 = qry.format(1, "")
-    qry2 = qry.format(0, "")
-    query = f"SELECT *"                                                      \
-            + f"FROM "                                                      \
-            + f"    (({qry1}) UNION ({qry2})) "                             \
-            + f"GROUP BY date, buslineid "  
+    qry = """
+                SELECT
+                    busLineID as lineID,
+                    closerStopID as stationID,
+                    date_format(to_timestamp(date), 'HH:mm:ss') as arrivalTime,
+                    %d as onTime
+                FROM
+                    input_tbl
+                WHERE
+                    date like '{} %s'
+                    AND
+                    atStop = 1
+                    AND
+                    vehicleID = {}
+                    AND
+                    (delay %s {} %s delay %s {})
+                ORDER BY
+                    date, vehicleID, busLineID """\
+            .format(day_picked, vehicle_id, -delay_limit, delay_limit)
 
-    print(qry1)
-    [print(r) for r in spark.sql(qry1).collect()]
-    """
-    df = spark.sql(query)
-    print(df)
-    [print(d) for d in df.collect()]
-    """
+    query1 = qry % (1, "%", ">=", "AND", "<=")
+    query2 = qry % (0, "%", "<", "OR", ">")
+    union_query = """
+        SELECT
+            *
+        FROM
+            (
+            {}
+            )
+            UNION
+            (
+            {}
+            )
+        ORDER BY
+            arrivalTime""".format(query1, query2)
 
+    solutionDF = spark.sql(union_query).dropDuplicates(['lineID', 'stationID'])
+    solutionDF = solutionDF.orderBy(f.col('arrivalTime'))
 
     # ---------------------------------------
 
@@ -113,7 +130,7 @@ if __name__ == '__main__':
     my_databricks_path = "/"
 
     my_dataset_dir = "FileStore/tables/6_Assignments/my_dataset_complete/"
-    my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_1/"
+    #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_3/"
 
@@ -133,4 +150,4 @@ if __name__ == '__main__':
     my_main(spark, my_dataset_dir, vehicle_id, day_picked, delay_limit)
 
     total_time = time.time() - start_time
-    print("Total time = " + str(total_time))
+    #print("Total time = " + str(total_time))

@@ -19,6 +19,7 @@
 import pyspark
 import time
 import pyspark.sql.functions as f
+from pyspark.sql.window import Window
 
 # ------------------------------------------
 # FUNCTION my_main
@@ -61,7 +62,8 @@ def my_main(spark,
                     busLineID as lineID,
                     closerStopID as stationID,
                     date_format(to_timestamp(date), 'HH:mm:ss') as arrivalTime,
-                    %d as onTime
+                    %d as onTime,
+                    atStop
                 FROM
                     input_tbl
                 WHERE
@@ -92,8 +94,21 @@ def my_main(spark,
         ORDER BY
             arrivalTime""".format(query1, query2)
 
-    solutionDF = spark.sql(union_query).dropDuplicates(['lineID', 'stationID'])
-    solutionDF = solutionDF.orderBy(f.col('arrivalTime'))
+    ws2 = Window.partitionBy('lineID', 'stationID').orderBy('arrivalTime')
+    windowSpec = Window.partitionBy().orderBy('arrivalTime')
+    solutionDF = spark\
+                    .sql(union_query)\
+                    .withColumn('rnum', f.row_number().over(windowSpec))\
+                    .orderBy('arrivalTime')\
+                    .withColumn('lag', f.lag('rnum', default=-1).over(ws2))\
+                    .where(f.col('rnum') - f.col('lag') != 1)\
+                    .select(
+                            f.col('lineID'),
+                            f.col('stationID'),
+                            f.col('arrivalTime'),
+                            f.col('onTime')
+                    )\
+                    .orderBy('arrivalTime')\
 
     # ---------------------------------------
 
@@ -139,6 +154,7 @@ if __name__ == '__main__':
     else:
         my_dataset_dir = my_databricks_path + my_dataset_dir
 
+    #my_dataset_dir = '/home/phantom/3_Code_Examples/L07-23_Spark_Environment/FileStore/tables/6_Assignments/temp'
     # 4. We configure the Spark Session
     spark = pyspark.sql.SparkSession.builder.getOrCreate()
     spark.sparkContext.setLogLevel('WARN')
@@ -151,3 +167,4 @@ if __name__ == '__main__':
 
     total_time = time.time() - start_time
     #print("Total time = " + str(total_time))
+
