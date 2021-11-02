@@ -101,30 +101,41 @@ def my_main(sc,
                         vehicle_id == x[7])
 
     # Discard fields that we do not need to make it faster
-    filteredRDD = filteredRDD.map(lambda x: (x[0], x[1], x[6], x[8]))
+    filteredRDD = filteredRDD\
+                    .map(lambda x: (x[0], x[1], x[6], x[8]))\
+                    .sortBy(lambda x: x[0])
 
-    # Since we are going to remove duplicates if the the bus is stopped
-    # we'll first sort by timestamp
-    sortedRDD = filteredRDD.sortBy(lambda x: x[0])
+    # Add a row number at the end of each tuple
+    # This is expensive
+    filteredRDD = filteredRDD\
+                    .zipWithIndex()\
+                    .map(lambda x: x[0] + (x[1],))
 
-    # Now we will group and reduce by station id and line id
-    # In the remapped tuple x[8] is now x[3] and x[1] is still x[1]
-    pairedRDD = sortedRDD.map(lambda x: ((x[1], x[3]), x))
+    productRDD = filteredRDD\
+                    .cartesian(filteredRDD)\
+                    .filter(lambda x:  \
+                                x[0][4] + 1 == x[1][4] \
+                                or \
+                                x[0][4] == 0 and x[1][4] == 0)
 
 
-    # Drop values where the bus hasn't moved and the line is still the same
-    reducedRDD = pairedRDD.reduceByKey(lambda x, _: x)\
-                    .sortBy(lambda x: x[1][0])
-    
+    consecutiveDuplicatesRemoved = productRDD\
+            .filter(lambda x:\
+                        (not (x[0][1] == x[1][1] and x[0][3] == x[1][3]))\
+                        or \
+                        (x[0][4] == 0 and x[1][4] == 0))
+
+    smallerRDD = consecutiveDuplicatesRemoved.map(lambda x: (x[1][0], x[1][1], x[1][2], x[1][3],))
+
+
     # In the remapped tuple x[8] is now x[3] and x[6] is now x[2]
     # Reorder the tuple to match the output form, also discard the date
-    solutionRDD = reducedRDD.map(\
+    solutionRDD = smallerRDD.map(\
             lambda x: ( \
-                    x[1][1],\
-                    x[1][3],\
-                    x[1][0].split(" ")[1],\
-                    1 if abs(x[1][2]) <= delay_limit else 0))
-
+                    x[1],\
+                    x[3],\
+                    x[0].split(" ")[1],\
+                    1 if abs(x[2]) <= delay_limit else 0))
 
     # ---------------------------------------
 
