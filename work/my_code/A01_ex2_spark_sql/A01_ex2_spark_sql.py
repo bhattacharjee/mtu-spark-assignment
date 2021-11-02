@@ -99,7 +99,6 @@ def my_main(spark,
     solutionDF = spark\
                     .sql(union_query)\
                     .withColumn('rnum', f.row_number().over(windowSpec))\
-                    .orderBy('arrivalTime')\
                     .withColumn('lag', f.lag('rnum', default=-1).over(ws2))\
                     .where(f.col('rnum') - f.col('lag') != 1)\
                     .select(
