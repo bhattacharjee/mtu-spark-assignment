@@ -154,8 +154,9 @@ def my_main(sc,
                             (\
                                 x[0][0],\
                                 x[0][1],\
-                                x[1][0],\
-                                1 if abs(x[1][2]) <= delay_limit else 0))
+                                x[1][0][11:],\
+                                1 if abs(x[1][1]) <= delay_limit else 0))\
+                    .sortBy(lambda x: x[2])
                             
 
     # ---------------------------------------
@@ -193,7 +194,7 @@ if __name__ == '__main__':
     my_databricks_path = "/"
 
     my_dataset_dir = "FileStore/tables/6_Assignments/my_dataset_complete/"
-    my_dataset_dir = "FileStore/tables/6_Assignments/temp/"
+    #my_dataset_dir = "FileStore/tables/6_Assignments/temp/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_1/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_2/"
     #my_dataset_dir = "FileStore/tables/6_Assignments/A01_ex2_micro_dataset_3/"
