@@ -98,6 +98,7 @@ def my_main(sc,
     filteredRDD = parsedRDD.filter(\
             lambda x: 1 == x[9] and \
                         x[0].startswith(day_picked) and \
+                        1 == x[9] and \
                         vehicle_id == x[7])
 
     # Discard fields that we do not need to make it faster
@@ -106,34 +107,56 @@ def my_main(sc,
 
     # Add a row number at the end of each tuple
     # This is expensive
+    # Then convert to the form
+    # ((lineid, stopid), (date, delay, rownumber))
     filteredRDD = filteredRDD\
-                    .sortBy(lambda x: x[0])\
+                    .sortBy(lambda x: (x[1], x[0]))\
                     .zipWithIndex()\
-                    .map(lambda x: x[0] + (x[1],))
-
-    productRDD = filteredRDD\
-                    .cartesian(filteredRDD)\
-                    .filter(lambda x:  \
-                                x[0][4] + 1 == x[1][4] \
-                                or \
-                                x[0][4] == 0 and x[1][4] == 0)
+                    .map(lambda x:\
+                            (\
+                                (x[0][1], x[0][3]),\
+                                (x[0][0], x[0][2], x[1])\
+                            ))
 
 
-    consecutiveDuplicatesRemoved = productRDD\
-            .filter(lambda x:\
-                        (not (x[0][1] == x[1][1] and x[0][3] == x[1][3]))\
-                        or \
-                        (x[0][4] == 0 and x[1][4] == 0))
+    # group by key, and convert all values to a list
+    # The values are now of the form
+    # [(date, delay, rownumber), (date, delay, rownumber), ...]
+    groupedRDD = filteredRDD\
+                    .groupByKey()\
+                    .mapValues(list)
 
 
-    # In the remapped tuple x[8] is now x[3] and x[6] is now x[2]
-    # Reorder the tuple to match the output form, also discard the date
-    solutionRDD = consecutiveDuplicatesRemoved.map(\
-            lambda x: ( \
-                    x[1][1],\
-                    x[1][3],\
-                    x[1][0].split(" ")[1],\
-                    1 if abs(x[1][2]) <= delay_limit else 0))
+    def remove_consecutive_duplicates(val_list:list)->list:
+        ret_val = []
+        last_row_num = -1
+        for r in val_list:
+            if last_row_num < 0 or r[2] != last_row_num + 1:
+                ret_val.append(r)
+            last_row_num = r[2]
+        return ret_val
+
+    # Remove consecutive duplicates in the list in each row
+    groupedRDD = groupedRDD.mapValues(remove_consecutive_duplicates)
+                
+    # Each row contains a list of multiple entries
+    # Use flatmap to convert each row to multiple rows,
+    # one row for each element of the list
+    # Row: ((lineid, stopid), (date, delay, rownumber))
+    # Row: ((lineid, stopid), (date, delay, rownumber))
+    ungroupedRDD = groupedRDD\
+                    .flatMap(lambda x: [(x[0], i) for i in x[1]])
+
+
+    solutionRDD = ungroupedRDD\
+                    .map(\
+                        lambda x:\
+                            (\
+                                x[0][0],\
+                                x[0][1],\
+                                x[1][0],\
+                                1 if abs(x[1][2]) <= delay_limit else 0))
+                            
 
     # ---------------------------------------
 
@@ -191,4 +214,71 @@ if __name__ == '__main__':
     my_main(sc, my_dataset_dir, vehicle_id, day_picked, delay_limit)
 
     total_time = time.time() - start_time
-    #print("Total time = " + str(total_time))
+    print("Total time = " + str(total_time))
+
+
+
+
+#def my_main(sc,
+#            my_dataset_dir,
+#            vehicle_id,
+#            day_picked,
+#            delay_limit
+#           ):
+#
+#    # 1. Operation C1: 'textFile'
+#    inputRDD = sc.textFile(my_dataset_dir)
+#
+#    # ---------------------------------------
+#    # TO BE COMPLETED
+#    # ---------------------------------------
+#    parsedRDD = inputRDD.map(process_line)
+#
+#    # Filter to remove items that don't match
+#    filteredRDD = parsedRDD.filter(\
+#            lambda x: 1 == x[9] and \
+#                        x[0].startswith(day_picked) and \
+#                        1 == x[9] and \
+#                        vehicle_id == x[7])
+#
+#    # Discard fields that we do not need to make it faster
+#    filteredRDD = filteredRDD\
+#                    .map(lambda x: (x[0], x[1], x[6], x[8]))
+#
+#    # Add a row number at the end of each tuple
+#    # This is expensive
+#    filteredRDD = filteredRDD\
+#                    .sortBy(lambda x: x[0])\
+#                    .zipWithIndex()\
+#                    .map(lambda x: x[0] + (x[1],))
+#
+#    productRDD = filteredRDD\
+#                    .cartesian(filteredRDD)\
+#                    .filter(lambda x:  \
+#                                x[0][4] + 1 == x[1][4] \
+#                                or \
+#                                x[0][4] == 0 and x[1][4] == 0)
+#
+#
+#    consecutiveDuplicatesRemoved = productRDD\
+#            .filter(lambda x:\
+#                        (not (x[0][1] == x[1][1] and x[0][3] == x[1][3]))\
+#                        or
+#                        x[1][4] == 0)
+#
+#
+#    # In the remapped tuple x[8] is now x[3] and x[6] is now x[2]
+#    # Reorder the tuple to match the output form, also discard the date
+#    solutionRDD = consecutiveDuplicatesRemoved.map(\
+#            lambda x: ( \
+#                    x[1][1],\
+#                    x[1][3],\
+#                    x[1][0].split(" ")[1],\
+#                    1 if abs(x[1][2]) <= delay_limit else 0))
+#
+#    # ---------------------------------------
+#
+#    # Operation A1: 'collect'
+#    resVAL = solutionRDD.collect()
+#    for item in resVAL:
+#        print(item)
