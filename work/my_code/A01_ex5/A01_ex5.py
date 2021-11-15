@@ -18,13 +18,83 @@
 
 import pyspark
 import time
+import pyspark.sql.functions as f
+from pyspark.sql.window import Window
 
 # ------------------------------------------
 # FUNCTION my_main
 # ------------------------------------------
-def my_main():
+def my_main(                                                                \
+            spark,                                                          \
+            my_dataset_dir,                                                 \
+            month_picked,                                                   \
+            delay_limit=60                                                  \
+        ):
+    # 1. We define the Schema of our DF.
+    my_schema = pyspark.sql.types.StructType(
+        [pyspark.sql.types.StructField("date", pyspark.sql.types.StringType(), False),
+         pyspark.sql.types.StructField("busLineID", pyspark.sql.types.IntegerType(), False),
+         pyspark.sql.types.StructField("busLinePatternumID", pyspark.sql.types.StringType(), False),
+         pyspark.sql.types.StructField("congestion", pyspark.sql.types.IntegerType(), False),
+         pyspark.sql.types.StructField("longitude", pyspark.sql.types.FloatType(), False),
+         pyspark.sql.types.StructField("latitude", pyspark.sql.types.FloatType(), False),
+         pyspark.sql.types.StructField("delay", pyspark.sql.types.IntegerType(), False),
+         pyspark.sql.types.StructField("vehicleID", pyspark.sql.types.IntegerType(), False),
+         pyspark.sql.types.StructField("closerStopID", pyspark.sql.types.IntegerType(), False),
+         pyspark.sql.types.StructField("atStop", pyspark.sql.types.IntegerType(), False)
+         ])
+
+    # 2. Operation C1: 'read'
+    def get_month(s):
+        return s[:7]
+    spark.udf.register('GET_MONTH', get_month, pyspark.sql.types.StringType())
+
+    def get_time(s):
+        return s[11:]
+    spark.udf.register('GET_TIME', get_time, pyspark.sql.types.StringType())
+
+    inputDF = spark.read.format("csv") \
+        .option("delimiter", ",") \
+        .option("quote", "") \
+        .option("header", "false") \
+        .schema(my_schema) \
+        .load(my_dataset_dir)\
+        
+    inputDF.persist()
+    inputDF.createOrReplaceTempView('base_table')
+
+    #inputDF = inputDF\
+    #            .where(f.substring(f.col('date'), 0, 7) == month_picked)
+
+    inputDF = spark.sql("""
+        (
+            SELECT
+                GET_MONTH(date), GET_TIME(date)
+            FROM
+                base_table
+        )
+    """)
+
+
+    #ws2 = Window.partitionBy('vehicleID').orderBy('date')
+    #windowSpec = Window.partitionBy().orderBy('date')
+
+    #numberedDF = inputDF.withColumn('rnum', f.row_number().over(windowSpec))\
+    #                .withColumn('lag', f.lag('rnum', default=-1).over(ws2))
+    #                .where(f.col('rnum') - f.col('lag') != 1)
+
+    for l in inputDF.take(500):
+        print(l)
+
     # TO BE COMPLETED
+    for i in numberedDF.take(50):
+        print(i)
     pass
+
+    # Operation A1: 'collect'
+    resVAL = solutionDF.collect()
+    for item in resVAL:
+        print(item)
 
 # --------------------------------------------------------
 #
@@ -43,6 +113,7 @@ def my_main():
 if __name__ == '__main__':
     # 1. We use as many input arguments as needed
     # TO BE COMPLETED
+    month_picked = "2013-01"
 
     # 2. Local or Databricks
     local_False_databricks_True = False
@@ -59,14 +130,21 @@ if __name__ == '__main__':
     else:
         my_dataset_dir = my_databricks_path + my_dataset_dir
 
+    my_dataset_dir = '/home/phantom/3_Code_Examples/L07-23_Spark_Environment/FileStore/tables/6_Assignments/temp'
     # 4. We configure Spark
     # TO BE COMPLETED
+    spark = pyspark.sql.SparkSession.builder.getOrCreate()
+    spark.sparkContext.setLogLevel('WARN')
+    print("\n\n\n")
 
     # 5. We call to our main function
     start_time = time.time()
 
     # TO BE COMPLETED
-    my_main()
+    my_main(                                                                \
+            spark,                                                          \
+            my_dataset_dir,                                                 \
+            month_picked)
 
     total_time = time.time() - start_time
     print("Total time = " + str(total_time))
