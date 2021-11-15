@@ -28,7 +28,7 @@ def my_main(                                                                \
             spark,                                                          \
             my_dataset_dir,                                                 \
             month_picked,                                                   \
-            delay_limit=60                                                  \
+            delay_limit=1                                                   \
         ):
     # 1. We define the Schema of our DF.
     my_schema = pyspark.sql.types.StructType(
@@ -58,25 +58,14 @@ def my_main(                                                                \
 
     inputDF = inputDF\
         .filter(month_picked == f.substring(f.col('date'), 0, 7))\
+        .where(f.col('atStop') == 1)\
         .withColumn('time', f.substring(f.col('date'), 12, 9))\
         .withColumn('isLate', is_late(f.col('delay')))\
-        .drop('congestion', 'longitude', 'latitude', 'busLinePatternumID', 'date')\
-        .where(f.col('atStop') == 1)
+        .drop('congestion', 'longitude', 'latitude', 'busLinePatternumID', 'date')
 
 
     inputDF.persist()
         
-    #inputDF.createOrReplaceTempView('base_table')
-    #inputDF = spark.sql("""
-    #    (
-    #        SELECT
-    #            *
-    #        FROM
-    #            base_table
-    #    )
-    #""")
-
-
     ws2 = Window.partitionBy('vehicleID', 'closerStopID', 'isLate').orderBy('vehicleId', 'time')
     windowSpec = Window.partitionBy().orderBy('vehicleId', 'time')
 
@@ -84,7 +73,7 @@ def my_main(                                                                \
                     .withColumn('lag', f.lag('rnum', default=-1).over(ws2))\
                     .where(f.col('rnum') - f.col('lag') != 1)
 
-    selectedDF = numberedDF\
+    uniqueLateDF = numberedDF\
                     .where(f.col('isLate') == 1)\
                     .drop('rnum', 'lag', 'delay', 'atStop')
 
