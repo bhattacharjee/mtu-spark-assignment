@@ -28,7 +28,8 @@ def my_main(                                                                \
             spark,                                                          \
             my_dataset_dir,                                                 \
             month_picked,                                                   \
-            delay_limit=1                                                   \
+            delay_limit=1,                                                  \
+            late_count_threshold=100                                        \
         ):
     # 1. We define the Schema of our DF.
     my_schema = pyspark.sql.types.StructType(
@@ -67,19 +68,13 @@ def my_main(                                                                \
 
     # If a bus has been late at a stop, count it, but count every instance only once
     # Do not count consecutive late instances
-    ws2 = Window.partitionBy('vehicleID', 'closerStopID', 'isLate').orderBy('vehicleId', 'time')
+    ws2 = Window.partitionBy('vehicleID', 'closerStopID', 'isLate').orderBy('vehicleId', 'time', 'closerStopID')
     windowSpec = Window.partitionBy().orderBy('vehicleId', 'time')
-    numberedDF = inputDF\
+    uniqueLateDF = inputDF\
                     .where(f.col('isLate') == 1)\
                     .withColumn('rnum', f.row_number().over(windowSpec))\
                     .withColumn('lag', f.lag('rnum', default=-1).over(ws2))\
                     .where(f.col('rnum') - f.col('lag') != 1)
-    uniqueLateDF = numberedDF\
-                    .where(f.col('isLate') == 1)
-
-    for row in uniqueLateDF.where(f.col('busLineID') == 116).collect():
-        print(row)
-    print('=' * 80)
 
     aggregatedLateDF = uniqueLateDF\
                     .groupBy(['busLineID', 'hour'])\
@@ -91,13 +86,6 @@ def my_main(                                                                \
     uniqueAtStopDF = inputDF.withColumn('rnum', f.row_number().over(windowSpec))\
                     .withColumn('lag', f.lag('rnum', default=-1).over(ws2))\
                     .where(f.col('rnum') - f.col('lag') != 1)
-
-    """
-    for row in uniqueAtStopDF.where(f.col('busLineID') == 116).collect():
-        print(row)
-    print('=' * 80)
-    """
-
     aggregatedAtStopDF = uniqueAtStopDF\
                     .groupBy(['busLineID', 'hour'])\
                     .count()
@@ -112,12 +100,9 @@ def my_main(                                                                \
 
     query = """
         SELECT
-            late_instances.busLineID AS busLineID,
-            late_instances.hour AS hour,
             ROUND(late_instances.count / all_instances.count * 100, 2) AS percentage,
-            late_instances.count AS LATECOUNT,
-            all_instances.count AS ALLCOUNT,
-            late_instances.count / all_instances.count AS divide
+            late_instances.hour AS hour,
+            late_instances.busLineID AS busLineID
         FROM
             late_instances
         INNER JOIN
@@ -126,10 +111,12 @@ def my_main(                                                                \
             late_instances.hour = all_instances.hour
             AND
             late_instances.busLineID = all_instances.busLineID
+            AND
+            late_instances.count > {}
         ORDER BY
             percentage
         DESC
-    """
+    """.format(late_count_threshold)
 
     uniqueAtStopDF = spark.sql(query)
 
