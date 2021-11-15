@@ -28,8 +28,9 @@ def my_main(                                                                \
             spark,                                                          \
             my_dataset_dir,                                                 \
             month_picked,                                                   \
-            delay_limit=1,                                                  \
-            late_count_threshold=100                                        \
+            delay_limit=60,                                                 \
+            late_count_threshold=100,                                       \
+            late_percentage_threshold=50                                    \
         ):
     # 1. We define the Schema of our DF.
     my_schema = pyspark.sql.types.StructType(
@@ -113,17 +114,21 @@ def my_main(                                                                \
             late_instances.busLineID = all_instances.busLineID
             AND
             late_instances.count > {}
+            AND
+            (late_instances.count * 100 / all_instances.count) > {}
         ORDER BY
             percentage
         DESC
-    """.format(late_count_threshold)
+    """.format(late_count_threshold, late_percentage_threshold)
 
-    uniqueAtStopDF = spark.sql(query)
+    solutionDF = spark.sql(query)
 
     # Operation A1: 'collect'
-    resVAL = uniqueAtStopDF.take(50)
+    resVAL = solutionDF.collect()
+    count = 0
     for item in resVAL:
-        print(item)
+        count = count + 1
+        print(f"{count:03d} - {item}")
 
 # --------------------------------------------------------
 #
@@ -143,6 +148,9 @@ if __name__ == '__main__':
     # 1. We use as many input arguments as needed
     # TO BE COMPLETED
     month_picked = "2013-01"
+    delay_limit_to_consider_late = 60 * 15 # 15 minutes delay
+    late_count_below_which_to_ignore = 100
+    late_percentage_below_which_to_ignore = 10.0
 
     # 2. Local or Databricks
     local_False_databricks_True = False
@@ -173,7 +181,10 @@ if __name__ == '__main__':
     my_main(                                                                \
             spark,                                                          \
             my_dataset_dir,                                                 \
-            month_picked)
+            month_picked,                                                   \
+            delay_limit=delay_limit_to_consider_late,                       \
+            late_count_threshold=late_count_below_which_to_ignore,          \
+            late_percentage_threshold=late_percentage_below_which_to_ignore)
 
     total_time = time.time() - start_time
     print("Total time = " + str(total_time))
