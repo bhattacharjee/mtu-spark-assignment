@@ -45,20 +45,20 @@ def my_main(                                                                \
          ])
 
     # 2. Operation C1: 'read'
-    def get_month(s):
-        return s[:7]
-    spark.udf.register('GET_MONTH', get_month, pyspark.sql.types.StringType())
-
-    def get_time(s):
-        return s[11:]
-    spark.udf.register('GET_TIME', get_time, pyspark.sql.types.StringType())
+    is_late = f.udf(lambda x: x > delay_limit)
 
     inputDF = spark.read.format("csv") \
         .option("delimiter", ",") \
         .option("quote", "") \
         .option("header", "false") \
         .schema(my_schema) \
-        .load(my_dataset_dir)\
+        .load(my_dataset_dir)
+
+    inputDF = inputDF\
+        .filter(month_picked == f.substring(f.col('date'), 0, 7))\
+        .withColumn('time', f.substring(f.col('date'), 11, 9))\
+        .withColumn('isLate', is_late(f.col('delay')))\
+        .drop('conestion', 'longitude', 'latitude', 'busLinePatternumID')
         
     inputDF.persist()
     inputDF.createOrReplaceTempView('base_table')
@@ -69,7 +69,7 @@ def my_main(                                                                \
     inputDF = spark.sql("""
         (
             SELECT
-                GET_MONTH(date), GET_TIME(date)
+                *
             FROM
                 base_table
         )
