@@ -45,7 +45,9 @@ def my_main(                                                                \
          ])
 
     # 2. Operation C1: 'read'
-    is_late = f.udf(lambda x: x > delay_limit)
+    def is_late_fn(x):
+        return 1 if x > delay_limit else 0
+    is_late = f.udf(is_late_fn, pyspark.sql.types.IntegerType())
 
     inputDF = spark.read.format("csv") \
         .option("delimiter", ",") \
@@ -56,38 +58,38 @@ def my_main(                                                                \
 
     inputDF = inputDF\
         .filter(month_picked == f.substring(f.col('date'), 0, 7))\
-        .withColumn('time', f.substring(f.col('date'), 11, 9))\
+        .withColumn('time', f.substring(f.col('date'), 12, 9))\
         .withColumn('isLate', is_late(f.col('delay')))\
-        .drop('conestion', 'longitude', 'latitude', 'busLinePatternumID')
-        
+        .drop('congestion', 'longitude', 'latitude', 'busLinePatternumID', 'date')\
+        .where(f.col('atStop') == 1)
+
+
     inputDF.persist()
-    inputDF.createOrReplaceTempView('base_table')
-
-    #inputDF = inputDF\
-    #            .where(f.substring(f.col('date'), 0, 7) == month_picked)
-
-    inputDF = spark.sql("""
-        (
-            SELECT
-                *
-            FROM
-                base_table
-        )
-    """)
+        
+    #inputDF.createOrReplaceTempView('base_table')
+    #inputDF = spark.sql("""
+    #    (
+    #        SELECT
+    #            *
+    #        FROM
+    #            base_table
+    #    )
+    #""")
 
 
-    #ws2 = Window.partitionBy('vehicleID').orderBy('date')
-    #windowSpec = Window.partitionBy().orderBy('date')
+    ws2 = Window.partitionBy('vehicleID', 'closerStopID', 'isLate').orderBy('vehicleId', 'time')
+    windowSpec = Window.partitionBy().orderBy('vehicleId', 'time')
 
-    #numberedDF = inputDF.withColumn('rnum', f.row_number().over(windowSpec))\
-    #                .withColumn('lag', f.lag('rnum', default=-1).over(ws2))
-    #                .where(f.col('rnum') - f.col('lag') != 1)
+    numberedDF = inputDF.withColumn('rnum', f.row_number().over(windowSpec))\
+                    .withColumn('lag', f.lag('rnum', default=-1).over(ws2))\
+                    .where(f.col('rnum') - f.col('lag') != 1)
 
-    for l in inputDF.take(500):
-        print(l)
+    selectedDF = numberedDF\
+                    .where(f.col('isLate') == 1)\
+                    .drop('rnum', 'lag', 'delay', 'atStop')
 
     # TO BE COMPLETED
-    for i in numberedDF.take(50):
+    for i in selectedDF.orderBy('vehicleID', 'time').take(50):
         print(i)
     pass
 
@@ -130,7 +132,7 @@ if __name__ == '__main__':
     else:
         my_dataset_dir = my_databricks_path + my_dataset_dir
 
-    my_dataset_dir = '/home/phantom/3_Code_Examples/L07-23_Spark_Environment/FileStore/tables/6_Assignments/temp'
+    #my_dataset_dir = '/home/phantom/3_Code_Examples/L07-23_Spark_Environment/FileStore/tables/6_Assignments/temp'
     # 4. We configure Spark
     # TO BE COMPLETED
     spark = pyspark.sql.SparkSession.builder.getOrCreate()
