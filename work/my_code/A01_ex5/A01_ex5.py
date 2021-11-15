@@ -76,21 +76,49 @@ def my_main(                                                                \
                     .where(f.col('isLate') == 1)\
                     .drop('rnum', 'lag', 'delay', 'atStop')
 
+    aggregatedLateDF = uniqueLateDF\
+                    .groupBy(['busLineID', 'hour'])\
+                    .count()
+
     # If a bus has been at a top once, count it only once
     ws2 = Window.partitionBy('vehicleID', 'closerStopID').orderBy('vehicleId', 'time')
     windowSpec = Window.partitionBy().orderBy('vehicleId', 'time')
     uniqueAtStopDF = inputDF.withColumn('rnum', f.row_number().over(windowSpec))\
                     .withColumn('lag', f.lag('rnum', default=-1).over(ws2))\
                     .where(f.col('rnum') - f.col('lag') != 1)
+    aggregatedAtStopDF = uniqueAtStopDF\
+                    .groupBy(['busLineID', 'hour'])\
+                    .count()
 
     inputDF.unpersist()
-    uniqueLateDF.persist()
-    uniqueAtStopDF.persist()
-    
-    uniqueLateDF.createOrReplaceTempView('late_instances')
-    uniqueAtStopDF.createOrReplaceTempView('all_instances')
+    aggregatedLateDF.persist()
+    aggregatedAtStopDF.persist()
+
+    aggregatedLateDF.createOrReplaceTempView('late_instances')
+    aggregatedAtStopDF.createOrReplaceTempView('all_instances')
 
 
+    query = """
+        SELECT
+            late_instances.busLineID AS busLineID,
+            late_instances.hour AS hour,
+            ROUND(late_instances.count / all_instances.count * 100, 2) AS percentage,
+            late_instances.count AS LATECOUNT,
+            all_instances.count AS ALLCOUNT
+        FROM
+            late_instances
+        INNER JOIN
+            all_instances
+        ON
+            late_instances.hour = all_instances.hour
+            AND
+            late_instances.busLineID = all_instances.busLineID
+        ORDER BY
+            percentage
+        DESC
+    """
+
+    uniqueAtStopDF = spark.sql(query)
 
     # Operation A1: 'collect'
     resVAL = uniqueAtStopDF.take(50)
