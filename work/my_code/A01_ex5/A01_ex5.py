@@ -61,7 +61,7 @@ def my_main(                                                                \
         .where(f.col('atStop') == 1)\
         .withColumn('time', f.substring(f.col('date'), 12, 9))\
         .withColumn('isLate', is_late(f.col('delay')))\
-        .drop('congestion', 'longitude', 'latitude', 'busLinePatternumID', 'date')\
+        .drop('congestion', 'longitude', 'latitude', 'busLinePatternumID')\
         .withColumn('hour', f.substring(f.col('time'), 0, 2))
 
 
@@ -69,12 +69,17 @@ def my_main(                                                                \
     # Do not count consecutive late instances
     ws2 = Window.partitionBy('vehicleID', 'closerStopID', 'isLate').orderBy('vehicleId', 'time')
     windowSpec = Window.partitionBy().orderBy('vehicleId', 'time')
-    numberedDF = inputDF.withColumn('rnum', f.row_number().over(windowSpec))\
+    numberedDF = inputDF\
+                    .where(f.col('isLate') == 1)\
+                    .withColumn('rnum', f.row_number().over(windowSpec))\
                     .withColumn('lag', f.lag('rnum', default=-1).over(ws2))\
                     .where(f.col('rnum') - f.col('lag') != 1)
     uniqueLateDF = numberedDF\
-                    .where(f.col('isLate') == 1)\
-                    .drop('rnum', 'lag', 'delay', 'atStop')
+                    .where(f.col('isLate') == 1)
+
+    for row in uniqueLateDF.where(f.col('busLineID') == 116).collect():
+        print(row)
+    print('=' * 80)
 
     aggregatedLateDF = uniqueLateDF\
                     .groupBy(['busLineID', 'hour'])\
@@ -86,6 +91,13 @@ def my_main(                                                                \
     uniqueAtStopDF = inputDF.withColumn('rnum', f.row_number().over(windowSpec))\
                     .withColumn('lag', f.lag('rnum', default=-1).over(ws2))\
                     .where(f.col('rnum') - f.col('lag') != 1)
+
+    """
+    for row in uniqueAtStopDF.where(f.col('busLineID') == 116).collect():
+        print(row)
+    print('=' * 80)
+    """
+
     aggregatedAtStopDF = uniqueAtStopDF\
                     .groupBy(['busLineID', 'hour'])\
                     .count()
@@ -164,7 +176,7 @@ if __name__ == '__main__':
     # 4. We configure Spark
     # TO BE COMPLETED
     spark = pyspark.sql.SparkSession.builder.getOrCreate()
-    spark.sparkContext.setLogLevel('WARN')
+    spark.sparkContext.setLogLevel('ERROR')
     print("\n\n\n")
 
     # 5. We call to our main function
