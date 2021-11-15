@@ -61,29 +61,39 @@ def my_main(                                                                \
         .where(f.col('atStop') == 1)\
         .withColumn('time', f.substring(f.col('date'), 12, 9))\
         .withColumn('isLate', is_late(f.col('delay')))\
-        .drop('congestion', 'longitude', 'latitude', 'busLinePatternumID', 'date')
+        .drop('congestion', 'longitude', 'latitude', 'busLinePatternumID', 'date')\
+        .withColumn('hour', f.substring(f.col('time'), 0, 2))
 
 
-    inputDF.persist()
-        
+    # If a bus has been late at a stop, count it, but count every instance only once
+    # Do not count consecutive late instances
     ws2 = Window.partitionBy('vehicleID', 'closerStopID', 'isLate').orderBy('vehicleId', 'time')
     windowSpec = Window.partitionBy().orderBy('vehicleId', 'time')
-
     numberedDF = inputDF.withColumn('rnum', f.row_number().over(windowSpec))\
                     .withColumn('lag', f.lag('rnum', default=-1).over(ws2))\
                     .where(f.col('rnum') - f.col('lag') != 1)
-
     uniqueLateDF = numberedDF\
                     .where(f.col('isLate') == 1)\
                     .drop('rnum', 'lag', 'delay', 'atStop')
 
-    # TO BE COMPLETED
-    for i in selectedDF.orderBy('vehicleID', 'time').take(50):
-        print(i)
-    pass
+    # If a bus has been at a top once, count it only once
+    ws2 = Window.partitionBy('vehicleID', 'closerStopID').orderBy('vehicleId', 'time')
+    windowSpec = Window.partitionBy().orderBy('vehicleId', 'time')
+    uniqueAtStopDF = inputDF.withColumn('rnum', f.row_number().over(windowSpec))\
+                    .withColumn('lag', f.lag('rnum', default=-1).over(ws2))\
+                    .where(f.col('rnum') - f.col('lag') != 1)
+
+    inputDF.unpersist()
+    uniqueLateDF.persist()
+    uniqueAtStopDF.persist()
+    
+    uniqueLateDF.createOrReplaceTempView('late_instances')
+    uniqueAtStopDF.createOrReplaceTempView('all_instances')
+
+
 
     # Operation A1: 'collect'
-    resVAL = solutionDF.collect()
+    resVAL = uniqueAtStopDF.take(50)
     for item in resVAL:
         print(item)
 
