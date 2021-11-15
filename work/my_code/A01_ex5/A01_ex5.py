@@ -104,7 +104,8 @@ def my_main(                                                                \
             late_instances.hour AS hour,
             ROUND(late_instances.count / all_instances.count * 100, 2) AS percentage,
             late_instances.count AS LATECOUNT,
-            all_instances.count AS ALLCOUNT
+            all_instances.count AS ALLCOUNT,
+            late_instances.count / all_instances.count AS divide
         FROM
             late_instances
         INNER JOIN
