@@ -135,7 +135,7 @@ def my_main(                                                                \
     count = 0
     for item in resVAL:
         count = count + 1
-        print(f"{count:03d} - {item}")
+        print(f"{item}")
 
 # --------------------------------------------------------
 #

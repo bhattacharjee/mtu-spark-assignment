@@ -143,10 +143,10 @@ def my_main(sc,
     # >>----------------------------------------------------
     def join_segments(first: tuple, second: tuple) -> tuple:
         if first[1] > second[0]:
-            print(f"Unexpected overlaps between segments {first} {second}")
+            #print(f"Unexpected overlaps between segments {first} {second}")
             return first 
         if first[0] > first[1] or second[0] > second[1]:
-            print(f"Segments not properly formed {first} {second}")
+            #print(f"Segments not properly formed {first} {second}")
             return first 
 
         # Swap if first comes after second

@@ -60,10 +60,10 @@ def get_speed(ts1: str, ts2: str, dist:float) -> float:
 
 def join_segments(first: tuple, second: tuple) -> tuple:
     if first[1] > second[0]:
-        print(f"Unexpected overlaps between segments {first} {second}")
+        #print(f"Unexpected overlaps between segments {first} {second}")
         return first 
     if first[0] > first[1] or second[0] > second[1]:
-        print(f"Segments not properly formed {first} {second}")
+        #print(f"Segments not properly formed {first} {second}")
         return first 
 
     # Swap if first comes after second
@@ -128,7 +128,6 @@ def my_main(spark,
                 return 0.0
             return distance
         except Exception as e:
-            print(e)
             return 0.0
 
     dist_udf = f.udf(get_distance, pyspark.sql.types.FloatType())
