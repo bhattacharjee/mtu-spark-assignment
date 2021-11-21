@@ -99,6 +99,7 @@ def my_main(spark,
 
     solutionDF = spark.sql(final_query)
 
+    solutionDF.persist()
 
     # ---------------------------------------
 

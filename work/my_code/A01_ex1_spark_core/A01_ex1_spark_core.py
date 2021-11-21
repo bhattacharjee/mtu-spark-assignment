@@ -183,6 +183,8 @@ def my_main(sc,
             filter_by_weekday_latitude_longitude_and_hours(\
                 north, south, east, west, hours_list))
 
+    filteredRDD.persist()
+
     # Now that we have the filtered RDD, we will create a new RDD that contains 3 things:
     # 1. hour 
     # 2.  PAIR
@@ -207,6 +209,9 @@ def my_main(sc,
 
     # After sorting, remove the key from the pair
     solutionRDD = pairedRDD.sortByKey(ascending=False).map(lambda x: x[1])
+
+    filteredRDD.unpersist()
+    solutionRDD.persist()
 
     # ---------------------------------------
 

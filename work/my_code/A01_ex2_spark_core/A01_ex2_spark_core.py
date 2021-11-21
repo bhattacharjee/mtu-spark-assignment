@@ -148,6 +148,7 @@ def my_main(sc,
                     .flatMap(lambda x: [(x[0], i) for i in x[1]])
 
 
+    # Get it to the final form and sort
     solutionRDD = ungroupedRDD\
                     .map(\
                         lambda x:\
@@ -159,6 +160,7 @@ def my_main(sc,
                     .sortBy(lambda x: x[2])
                             
 
+    solutionRDD.persist()
     # ---------------------------------------
 
     # Operation A1: 'collect'

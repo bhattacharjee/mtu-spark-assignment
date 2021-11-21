@@ -109,6 +109,7 @@ def my_main(spark,
                     )\
                     .orderBy('arrivalTime')\
 
+    solutionDF.persist()
     # ---------------------------------------
 
     # Operation A1: 'collect'

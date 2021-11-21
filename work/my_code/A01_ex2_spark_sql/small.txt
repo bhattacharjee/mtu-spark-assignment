@@ -96,3 +96,4 @@ Row(lineID=38, stationID=1816, arrivalTime='18:03:48', onTime=0)
 Row(lineID=38, stationID=1822, arrivalTime='18:07:08', onTime=0)
 Row(lineID=38, stationID=4995, arrivalTime='18:09:47', onTime=0)
 Row(lineID=38, stationID=4745, arrivalTime='18:17:51', onTime=0)
+Total time = 89.28681778907776

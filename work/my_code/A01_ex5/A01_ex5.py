@@ -28,7 +28,7 @@ def my_main(                                                                \
             spark,                                                          \
             my_dataset_dir,                                                 \
             month_picked,                                                   \
-            delay_limit=60,                                                 \
+            delay_limit=60*5,                                               \
             late_count_threshold=100,                                       \
             late_percentage_threshold=50                                    \
         ):
@@ -148,7 +148,7 @@ if __name__ == '__main__':
     # 1. We use as many input arguments as needed
     # TO BE COMPLETED
     month_picked = "2013-01"
-    delay_limit_to_consider_late = 60 * 15 # 15 minutes delay
+    delay_limit_to_consider_late = 60 * 5 # 15 minutes delay
     late_count_below_which_to_ignore = 100
     late_percentage_below_which_to_ignore = 10.0
 
