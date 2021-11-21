@@ -66,6 +66,7 @@ def my_main(                                                                \
         .drop('congestion', 'longitude', 'latitude', 'busLinePatternumID')\
         .withColumn('hour', f.substring(f.col('time'), 0, 2))
 
+    inputDF.persist()
 
     # If a bus has been late at a stop, count it, but count every instance only once
     # Do not count consecutive late instances
@@ -97,6 +98,9 @@ def my_main(                                                                \
 
     aggregatedLateDF.createOrReplaceTempView('late_instances')
     aggregatedAtStopDF.createOrReplaceTempView('all_instances')
+    inputDF.unpersist()
+    aggregatedLateDF.persist()
+    aggregatedAtStopDF.persist()
 
 
     query = """
@@ -122,6 +126,9 @@ def my_main(                                                                \
     """.format(late_count_threshold, late_percentage_threshold)
 
     solutionDF = spark.sql(query)
+    aggregatedLateDF.unpersist()
+    aggregatedAtStopDF.unpersist()
+    solutionDF.persist()
 
     # Operation A1: 'collect'
     resVAL = solutionDF.collect()

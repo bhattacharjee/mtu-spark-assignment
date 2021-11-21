@@ -96,6 +96,9 @@ def my_main(sc,
                 1 == x[9] and \
                 x[0] >= current_time and x[0] < end_time)
 
+    filteredRDD.persist()
+
+    # Change to key-value pair for further group and reduce
     pairedRDD = filteredRDD.map( \
             lambda x: \
                 ( \
@@ -117,14 +120,19 @@ def my_main(sc,
                  
     candidateRDD = pairedRDD.reduceByKey(lambda x, y: x + y)
 
+    # Find the entry with the maximum length
     maxLength = len(candidateRDD.max(lambda x: len(x[1]))[1])
 
+    # Now only take those elements where the length is the same as the max length
     filteredCandidateRDD = candidateRDD.filter(lambda x: maxLength == len(x[1]))
 
     solutionRDD = filteredCandidateRDD\
                     .map(lambda x: (x[0], sorted(x[1]))) \
                     .sortBy(lambda x: x[0])
 
+
+    filteredRDD.unpersist()
+    solutionRDD.persist()
 
     # ---------------------------------------
 

@@ -76,7 +76,9 @@ def my_main(spark, my_dataset_dir, current_time, seconds_horizon):
                 ({})
             GROUP BY stationID""".format(inner_query)
 
-    spark.sql(agg_query).createOrReplaceTempView('aggregated_tbl')
+    tempDF = spark.sql(agg_query)
+    tempDF.persist()
+    tempDF.createOrReplaceTempView('aggregated_tbl')
 
     max_len_query =                                                         \
             f"SELECT MAX(vehicleCount) as maxlen FROM aggregated_tbl"
@@ -95,6 +97,8 @@ def my_main(spark, my_dataset_dir, current_time, seconds_horizon):
             """
 
     solutionDF = spark.sql(final_select_query)
+    tempDF.unpersist()
+    solutionDF.persist()
 
 
 

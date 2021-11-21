@@ -20,6 +20,7 @@ import pyspark
 import time
 import datetime
 from math import radians, cos, sin, asin, sqrt
+from haversine import haversine
 
 # ------------------------------------------
 # FUNCTION process_line
@@ -60,7 +61,7 @@ def process_line(line):
     # 4. We return res
     return res
 
-def haversine_distance(cord1: tuple, cord2: tuple) -> float:
+def haversine_distance_internal(cord1: tuple, cord2: tuple) -> float:
     longitude1, latitude1 = cord1
     longitude2, latitude2 = cord2
     radius_of_earth_km = 6371.0088
@@ -72,6 +73,16 @@ def haversine_distance(cord1: tuple, cord2: tuple) -> float:
     a = a + cos(latitude1) * cos(latitude2) * sin(delta_long_radians / 2) ** 2
     c = 2 * asin(sqrt(a))
     return radius_of_earth_km * c
+
+def haversine_distance(coord1: tuple, coord2: tuple) -> float:
+    (lon1, lat1) = coord1
+    (lon2, lat2) = coord2
+    try:
+        dist = haversine((lat1, lon1), (lat2, lon2))
+        return dist
+    except:
+        return haversine_distance_internal(coord1, coord2)
+
 
 def get_speed(ts1: str, ts2: str, dist:float) -> float:
     try:
@@ -103,6 +114,7 @@ def my_main(sc,
     
     # Select lines for the day we have
     selectedRDD = inputRDD.filter(lambda x: x.startswith(day_picked))
+    selectedRDD.persist()
 
     # Parse the lines
     parsedRDD = selectedRDD.map(process_line)
@@ -125,6 +137,8 @@ def my_main(sc,
                         0               # Lenth of segment
                 )
             ))
+    selectedRDD.unpersist()
+    pairedRDD.persist()
 
     # >>----------------------------------------------------
     def join_segments(first: tuple, second: tuple) -> tuple:
@@ -165,6 +179,8 @@ def my_main(sc,
                                     .map(lambda x: x[1]) \
                                     .sortBy(lambda x: x[0])
 
+    pairedRDD.unpersist()
+    solutionRDD.persist()
     # ---------------------------------------
 
     # Operation A1: 'collect'
