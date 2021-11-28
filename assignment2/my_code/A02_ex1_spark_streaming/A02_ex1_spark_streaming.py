@@ -96,6 +96,10 @@ def my_model(ssc,
     # 1. Operation C1: 'textFileStream'
     inputDStream = ssc.textFileStream(monitoring_dir)
 
+    # ---------------------------------------
+    # TO BE COMPLETED
+    # ---------------------------------------
+
     # Split into fields
     inputDStream = inputDStream.map(process_line)
 
@@ -126,10 +130,6 @@ def my_model(ssc,
 
 
     solutionDStream = reducedDStream
-
-    # ---------------------------------------
-    # TO BE COMPLETED
-    # ---------------------------------------
 
 
     # ---------------------------------------
