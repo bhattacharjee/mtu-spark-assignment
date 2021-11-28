@@ -104,9 +104,9 @@ def my_model(ssc,
 
     # Filter by latitude and longitude
     inputDStream = inputDStream.filter(                                     \
-                                    lambda x:                               \
-                                        south <= x[5] and x[5] <= north and \
-                                        west <= x[4] and x[4] <= east)
+                        lambda x:                                           \
+                            south <= x[5] and x[5] <= north and             \
+                            west <= x[4] and x[4] <= east)
 
     # Filter to only include the hours we are interested in
     inputDStream = inputDStream.filter(lambda x: get_hour(x) in hours_list)
@@ -114,10 +114,18 @@ def my_model(ssc,
     # convert to key value, (hour, (congestion, count))
     pairedDStream = inputDStream.map(lambda x: (get_hour(x), (x[3], 1,)))
 
-    reducedRDD = pairedDStream.reduceByKey(\
-            lambda x, y: (x[0] + y[0], x[1] + y[1],))
+    reducedDStream = pairedDStream.reduceByKey(\
+                        lambda x, y: (x[0] + y[0], x[1] + y[1],))
     
-    reducedRDD.pprint(num=100000)
+    # Get the percentage of congested for each hour
+    reducedDStream = reducedDStream.map(                                    \
+                        lambda x: (x[0], get_percentage(x[1])))
+
+    reducedDStream = reducedDStream.transform(                              \
+                        lambda x: x.sortBy(lambda y: y[1], ascending=True))
+
+
+    solutionDStream = reducedDStream
 
     # ---------------------------------------
     # TO BE COMPLETED
@@ -127,7 +135,7 @@ def my_model(ssc,
     # ---------------------------------------
 
     # Operation A1: 'pprint' to get all results
-    #solutionDStream.pprint()
+    solutionDStream.pprint()
 
 # ------------------------------------------
 # FUNCTION get_source_dir_file_names
@@ -338,9 +346,6 @@ if __name__ == '__main__':
         source_dir = my_local_path + source_dir
         monitoring_dir = my_local_path + monitoring_dir
         checkpoint_dir = my_local_path + checkpoint_dir
-        print(f'Source dir = {source_dir}')
-        print(f'monitor dir = {monitoring_dir}')
-        print(f'checkpoint dir = {checkpoint_dir}')
     else:
         source_dir = my_databricks_path + source_dir
         monitoring_dir = my_databricks_path + monitoring_dir
@@ -362,8 +367,6 @@ if __name__ == '__main__':
         # 4.2. We remove the checkpoint_dir
         dbutils.fs.rm(checkpoint_dir, True)
 
-    print(f"\n\n\nCreating directories: \n{monitoring_dir} \n{checkpoint_dir}\n\n\n")
-    print(os.getcwd())
     # 5. We re-create the directories again
     if local_False_databricks_True == False:
         # 5.1. We re-create the monitoring_dir
