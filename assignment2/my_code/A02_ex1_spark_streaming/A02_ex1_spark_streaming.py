@@ -62,6 +62,24 @@ def process_line(line):
     # 4. We return res
     return res
 
+from datetime import datetime
+def is_weekday(raw_tuple):
+    dateformat = '%Y-%m-%d %H:%M:%S'
+    d = datetime.strptime(raw_tuple[0], dateformat)
+    return d.weekday() < 5
+
+def get_hour(row):
+    dateformat = '%Y-%m-%d %H:%M:%S'
+    d = datetime.strptime(row[0], dateformat)
+    return f'{d.hour:02d}'
+
+def get_percentage(x):
+    try:
+        return round(x[0] * 100 / x[1], 2)
+    except:
+        return 0.0
+
+
 # ------------------------------------------
 # FUNCTION my_model
 # ------------------------------------------
@@ -80,7 +98,26 @@ def my_model(ssc,
 
     # Split into fields
     inputDStream = inputDStream.map(process_line)
-    inputDStream.pprint()
+
+    # Filter by weekday
+    inputDStream = inputDStream.filter(is_weekday)
+
+    # Filter by latitude and longitude
+    inputDStream = inputDStream.filter(                                     \
+                                    lambda x:                               \
+                                        south <= x[5] and x[5] <= north and \
+                                        west <= x[4] and x[4] <= east)
+
+    # Filter to only include the hours we are interested in
+    inputDStream = inputDStream.filter(lambda x: get_hour(x) in hours_list)
+
+    # convert to key value, (hour, (congestion, count))
+    pairedDStream = inputDStream.map(lambda x: (get_hour(x), (x[3], 1,)))
+
+    reducedRDD = pairedDStream.reduceByKey(\
+            lambda x, y: (x[0] + y[0], x[1] + y[1],))
+    
+    reducedRDD.pprint(num=100000)
 
     # ---------------------------------------
     # TO BE COMPLETED
