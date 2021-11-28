@@ -119,10 +119,10 @@ def my_model(ssc,
     
     # Get the percentage of congested for each hour
     reducedDStream = reducedDStream.map(                                    \
-                        lambda x: (x[0], get_percentage(x[1])))
+                        lambda x: (x[0], get_percentage(x[1]), x[1][1], x[1][0]))
 
     reducedDStream = reducedDStream.transform(                              \
-                        lambda x: x.sortBy(lambda y: y[1], ascending=True))
+                        lambda x: x.sortBy(lambda y: y[1], ascending=False))
 
 
     solutionDStream = reducedDStream
