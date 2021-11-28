@@ -214,7 +214,7 @@ if __name__ == '__main__':
     verbose = False
 
     # 2. Local or Databricks
-    local_False_databricks_True = True
+    local_False_databricks_True = False
 
     # 3. We set the path to my_dataset, my_monitoring, my_checkpoint and my_result
     my_local_path = "../../../../"
