@@ -1,0 +1,7 @@
+
+---------------------------
+ RESULTS		
+---------------------------
+
+ERROR: Multiple streaming aggregations are not supported with streaming DataFrames/Datasets. 
+

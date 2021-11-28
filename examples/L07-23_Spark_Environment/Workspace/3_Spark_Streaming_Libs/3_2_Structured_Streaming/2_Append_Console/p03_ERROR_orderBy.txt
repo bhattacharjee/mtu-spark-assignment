@@ -1,0 +1,8 @@
+
+---------------------------
+ RESULTS		
+---------------------------
+
+ERROR: Sorting is not supported on streaming DataFrames/Datasets, 
+       unless it is on aggregated DataFrame/Dataset in Complete output mode.
+

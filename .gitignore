@@ -129,3 +129,29 @@ dmypy.json
 .pyre/
 
 3_Code_Examples
+
+# some more
+*.bk
+*.bk.crc
+*.crc
+_SUCCESS
+checkpoint-1*
+checkpoint-2*
+checkpoint-3*
+checkpoint-4*
+checkpoint-5*
+checkpoint-6*
+checkpoint-7*
+checkpoint-8*
+checkpoint-9*
+-[0-9]*
+log-0*
+log-1*
+log-2*
+log-3*
+log-4*
+log-5*
+log-6*
+log-7*
+log-8*
+log-9*
