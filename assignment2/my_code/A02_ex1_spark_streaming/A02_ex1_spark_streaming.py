@@ -78,6 +78,10 @@ def my_model(ssc,
     # 1. Operation C1: 'textFileStream'
     inputDStream = ssc.textFileStream(monitoring_dir)
 
+    # Split into fields
+    inputDStream = inputDStream.map(process_line)
+    inputDStream.pprint()
+
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
@@ -86,7 +90,7 @@ def my_model(ssc,
     # ---------------------------------------
 
     # Operation A1: 'pprint' to get all results
-    solutionDStream.pprint()
+    #solutionDStream.pprint()
 
 # ------------------------------------------
 # FUNCTION get_source_dir_file_names
