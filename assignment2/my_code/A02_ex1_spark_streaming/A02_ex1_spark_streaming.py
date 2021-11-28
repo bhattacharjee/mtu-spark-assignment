@@ -297,6 +297,9 @@ if __name__ == '__main__':
         source_dir = my_local_path + source_dir
         monitoring_dir = my_local_path + monitoring_dir
         checkpoint_dir = my_local_path + checkpoint_dir
+        print(f'Source dir = {source_dir}')
+        print(f'monitor dir = {monitoring_dir}')
+        print(f'checkpoint dir = {checkpoint_dir}')
     else:
         source_dir = my_databricks_path + source_dir
         monitoring_dir = my_databricks_path + monitoring_dir
@@ -318,13 +321,15 @@ if __name__ == '__main__':
         # 4.2. We remove the checkpoint_dir
         dbutils.fs.rm(checkpoint_dir, True)
 
+    print(f"\n\n\nCreating directories: \n{monitoring_dir} \n{checkpoint_dir}\n\n\n")
+    print(os.getcwd())
     # 5. We re-create the directories again
     if local_False_databricks_True == False:
         # 5.1. We re-create the monitoring_dir
-        os.mkdir(monitoring_dir)
+        os.makedirs(monitoring_dir)
 
         # 5.2. We re-create the checkpoint_dir
-        os.mkdir(checkpoint_dir)
+        os.makedirs(checkpoint_dir)
     else:
         # 5.1. We re-create the monitoring_dir
         dbutils.fs.mkdirs(monitoring_dir)
