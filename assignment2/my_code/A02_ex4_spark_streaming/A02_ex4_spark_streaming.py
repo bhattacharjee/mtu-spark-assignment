@@ -156,9 +156,8 @@ def my_model(ssc,
 
         add_distance = haversine_distance(first[3], second[2])
         speed = get_speed(first[1], second[0], add_distance)
-        if (speed > max_speed_accepted):
-            print(speed > max_speed_accepted, speed,  max_speed_accepted)
-
+        #if (speed > max_speed_accepted):
+        #    print(speed > max_speed_accepted, speed,  max_speed_accepted)
         add_distance = 0 if speed >= max_speed_accepted else add_distance
 
 
@@ -170,8 +169,17 @@ def my_model(ssc,
     # <<----------------------------------------------------
 
     inputDStream = inputDStream.reduceByKey(join_segments)\
-                            .map(lambda x: x[1][4])
+                            .map(lambda x: (x[0], x[1][4]))
 
+    def update_fn(accum, curr):
+        #print(accum, type(accum), curr, type(curr))
+        if curr is None:
+            curr = 0.0
+        return sum(accum) + curr
+
+    inputDStream = inputDStream.updateStateByKey(update_fn)
+
+    inputDStream = inputDStream.map(lambda x: x[1])
     # >>----------------------------------------------------
     def get_initial_bucket(x: float):
         bucket_num = int(x // bucket_size)
@@ -183,6 +191,7 @@ def my_model(ssc,
     inputDStream = inputDStream.reduceByKey(lambda x, y: (x[0], x[1], x[2] + y[2]))\
                                 .map(lambda x: x[1])\
                                 .transform(lambda rdd: rdd.sortBy(lambda x: x[0]))
+    
 
     solutionDStream = inputDStream
 
