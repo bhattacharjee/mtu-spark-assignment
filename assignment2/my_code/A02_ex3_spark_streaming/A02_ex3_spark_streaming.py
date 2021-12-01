@@ -62,6 +62,15 @@ def process_line(line):
     # 4. We return res
     return res
 
+
+def get_end_time(current_time:str, seconds_horizon:int) -> str:
+    import datetime
+    import time
+    dateformat = "%Y-%m-%d %H:%M:%S"
+    d = datetime.datetime.strptime(current_time, dateformat)
+    d = d + datetime.timedelta(seconds=seconds_horizon)
+    return d.strftime(dateformat)
+
 # ------------------------------------------
 # FUNCTION my_model
 # ------------------------------------------
@@ -78,8 +87,51 @@ def my_model(ssc,
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
+    end_time = get_end_time(current_time, seconds_horizon)
+
+    # Parse the input
+    inputDStream = inputDStream.map(process_line)
+
+    # Filter the records ot include only
+    # 1. Buses that are on the stop
+    # 2. Within the time window
+    inputDStream = inputDStream.filter( \
+            lambda x: \
+                1 == x[9] and \
+                x[0] >= current_time and x[0] <= end_time)
+
+    
+    # closer_stop, vehicle_id
+    inputDStream = inputDStream.map(lambda x: (x[8], x[7]))
+    
+    # group by closer_stop, and sort the vehicle ids
+    # len(arr) -> (closer_stop, [vehicle1, vehicle2])
+    inputDStream = inputDStream \
+                    .groupByKey() \
+                    .map(lambda r: \
+                            (\
+                                len(set(r[1])),\
+                                (r[0], sorted(list(set(r[1]))))))
 
 
+
+    # Get the row with the largest length
+    lengthDStream = inputDStream\
+                .map(lambda r: ("dummy_key", r[0]))\
+                .reduceByKey(lambda x, y: x if x > y else y)\
+                .map(lambda x: (x[1], x[0]))
+ 
+    
+    # Join with the max length and select only those where the max length matches
+    # A round-about way of filtering, but an inner join works here
+    inputDStream = lengthDStream.join(inputDStream)
+
+    # Now get it to the final format
+    inputDStream = inputDStream\
+                        .map(lambda x: x[1][1])\
+                        .transform(lambda rdd: rdd.sortBy(lambda x: x[0]))
+
+    solutionDStream = inputDStream
     # ---------------------------------------
 
     # Operation A1: 'pprint' to get all results
