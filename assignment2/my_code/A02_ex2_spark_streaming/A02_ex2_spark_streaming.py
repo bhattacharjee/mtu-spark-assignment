@@ -79,7 +79,51 @@ def my_model(ssc,
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
+    
+    # Parse the line
+    print(f"vehicle_id = {vehicle_id}, day_picked={day_picked}, delay_limit={delay_limit}")
+    inputDStream = inputDStream.map(process_line)
+    
+    inputDStream = inputDStream.window(2 * time_step_interval, time_step_interval)
 
+
+    # keep only those entries we are interested in
+    inputDStream = inputDStream.filter(                             \
+                        lambda x:                                   \
+                            x[7] == vehicle_id and                  \
+                            x[9] != 0 and                           \
+                            x[0][:10] == day_picked)
+    
+    # Remove the columns that we do not need
+    # (Date, Bus_Line, onTime, Closer_Stop)
+    inputDStream = inputDStream.map(lambda x: (x[0], x[1], 1 if abs(x[6]) <= abs(delay_limit) else 0, x[8]))
+    
+    # Sort by closer-stop and date
+    inputDStream = inputDStream.transform(                          \
+                        lambda rdd: rdd.sortBy(lambda x: (x[3], x[1])))
+
+    # Pair by bus line id
+    # ((Bus_Line), (Date, Delay, Closer_Stop))
+    inputDStream = inputDStream.map(lambda x: ((x[1]), (x[0], x[2], x[3])))
+    
+    # Convert to one list this is bad for performance but is the easiest way
+    # to do this
+    # Only keep those rows whose closer-stop has changed
+    def filter_rows(rlist):
+        curr_row = None
+        prev_row = None
+        retval = []
+        for r in rlist:
+            prev_row = curr_row
+            curr_row = r
+            if prev_row is None or curr_row[2] != prev_row[2]:
+                retval.append(r)
+        return retval
+
+    inputDStream = inputDStream.groupByKey().mapValues(lambda r: filter_rows(list(r)))
+    
+
+    solutionDStream = inputDStream
 
     # ---------------------------------------
 
