@@ -81,12 +81,12 @@ def my_model(ssc,
     # ---------------------------------------
     
     # Parse the line
-    print(f"vehicle_id = {vehicle_id}, day_picked={day_picked}, delay_limit={delay_limit}")
-    inputDStream = inputDStream.map(process_line)
-    
+    # print(f"vehicle_id = {vehicle_id}, day_picked={day_picked}, delay_limit={delay_limit}")
     inputDStream = inputDStream.window(2 * time_step_interval, time_step_interval)
 
-
+    inputDStream = inputDStream.map(process_line)
+    
+    
     # keep only those entries we are interested in
     inputDStream = inputDStream.filter(                             \
                         lambda x:                                   \
@@ -98,12 +98,13 @@ def my_model(ssc,
     # (Date, Bus_Line, onTime, Closer_Stop)
     inputDStream = inputDStream.map(lambda x: (x[0], x[1], 1 if abs(x[6]) <= abs(delay_limit) else 0, x[8]))
     
-    # Sort by closer-stop and date
+
+    # Sort by bus_line and date
     inputDStream = inputDStream.transform(                          \
-                        lambda rdd: rdd.sortBy(lambda x: (x[3], x[1])))
+                        lambda rdd: rdd.sortBy(lambda x: (x[1], x[0])))
 
     # Pair by bus line id
-    # ((Bus_Line), (Date, Delay, Closer_Stop))
+    # ((Bus_Line), (Date, onTime, Closer_Stop))
     inputDStream = inputDStream.map(lambda x: ((x[1]), (x[0], x[2], x[3])))
     
     # Convert to one list this is bad for performance but is the easiest way
@@ -116,21 +117,37 @@ def my_model(ssc,
         for r in rlist:
             prev_row = curr_row
             curr_row = r
-            if prev_row is None or curr_row[2] != prev_row[2]:
-                retval.append(r)
+            if prev_row == None or curr_row[2] != prev_row[2]:
+                retval.append(curr_row)
         return retval
 
     inputDStream = inputDStream.groupByKey().mapValues(lambda r: filter_rows(list(r)))
-    
+
+    # Finally flatmap and get it back to the schema we want
+    # to Bus_Line, Closer_Stop, ArrivalTime, OnTime
+    def flat_map(row):
+        key = row[0]
+        arr = row[1]
+        retval = []
+        for v in arr:
+            retval.append((key,) + tuple(v))
+        return retval
+
+    inputDStream = inputDStream.flatMap(flat_map)                            \
+                            .map(lambda x: (x[0], x[3], x[1][11:], x[2]))
+
+    # Sort by date for final output
+    inputDStream = inputDStream.transform(lambda rdd: rdd.sortBy(lambda x: x[2]))
 
     solutionDStream = inputDStream
-
     # ---------------------------------------
 
     # Operation A1: 'pprint' to get all results
     solutionDStream.pprint()
 
-# ------------------------------------------
+
+
+
 # FUNCTION get_source_dir_file_names
 # ------------------------------------------
 def get_source_dir_file_names(local_False_databricks_True, source_dir, verbose):
