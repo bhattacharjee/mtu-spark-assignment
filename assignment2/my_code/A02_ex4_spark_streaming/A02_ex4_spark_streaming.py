@@ -62,6 +62,45 @@ def process_line(line):
     # 4. We return res
     return res
 
+from haversine import haversine
+from math import radians, sin, cos, asin, sqrt
+def haversine_distance_internal(cord1: tuple, cord2: tuple) -> float:
+    longitude1, latitude1 = cord1
+    longitude2, latitude2 = cord2
+    radius_of_earth_km = 6371.0088
+    delta_lat_radians = radians(latitude2 - latitude1)
+    delta_long_radians = radians(longitude2 - longitude1)
+    latitude1 = radians(latitude1)
+    latitude2 = radians(latitude2)
+    a = sin(delta_lat_radians / 2) ** 2 
+    a = a + cos(latitude1) * cos(latitude2) * sin(delta_long_radians / 2) ** 2
+    c = 2 * asin(sqrt(a))
+    return radius_of_earth_km * c
+
+def haversine_distance(coord1: tuple, coord2: tuple) -> float:
+    (lon1, lat1) = coord1
+    (lon2, lat2) = coord2
+    try:
+        dist = haversine((lat1, lon1), (lat2, lon2))
+        return dist
+    except:
+        return haversine_distance_internal(coord1, coord2)
+
+import sys
+import datetime
+def get_speed(ts1: str, ts2: str, dist:float) -> float:
+    try:
+        dateformat = "%Y-%m-%d %H:%M:%S"
+        t1 = datetime.datetime.strptime(ts1, dateformat)
+        t2 = datetime.datetime.strptime(ts2, dateformat)
+        #print(t1, t2, t1-t2)
+        tt = t2 - t1
+        seconds = abs(tt.total_seconds())
+        return abs(dist) / seconds * 1000
+    except Exception as e:
+        #print("returning float max", e)
+        return sys.float_info.max
+
 # ------------------------------------------
 # FUNCTION my_model
 # ------------------------------------------
@@ -77,7 +116,75 @@ def my_model(ssc,
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
+    
+    # Select frames for that day
+    inputDStream = inputDStream.filter(lambda x: x.startswith(day_picked))
 
+    # Parse
+    inputDStream = inputDStream.map(process_line)
+
+    # sort by vehicle id and timestamp
+    inputDStream = inputDStream.transform(
+                        lambda rdd: rdd.sortBy(ascending=True, keyfunc=lambda x: (x[7], x[0],)))
+
+    # change pairing, convert to a segment instead of a single point
+    inputDStream = inputDStream.map(
+                        lambda x:
+                        (\
+                            x[7], # Vehicle id
+                            (\
+                                x[0],               #start timestamp for segment
+                                x[0],               # end timestamp
+                                (x[4], x[5]),       # start coordinates of segment
+                                (x[4], x[5]),       # end coordinates of segment
+                                0                   # length of segment
+                            )
+                        ))
+
+    # >>----------------------------------------------------
+    def join_segments(first: tuple, second: tuple) -> tuple:
+        if first[1] > second[0]:
+            #print(f"Unexpected overlaps between segments {first} {second}")
+            return first 
+        if first[0] > first[1] or second[0] > second[1]:
+            #print(f"Segments not properly formed {first} {second}")
+            return first 
+
+        # Swap if first comes after second
+        if first[0] > second[0]:
+            first, second = second, first
+
+        add_distance = haversine_distance(first[3], second[2])
+        speed = get_speed(first[1], second[0], add_distance)
+        if (speed > max_speed_accepted):
+            print(speed > max_speed_accepted, speed,  max_speed_accepted)
+
+        add_distance = 0 if speed >= max_speed_accepted else add_distance
+
+
+        return (first[0],  \
+                second[1], \
+                first[2],  \
+                second[3], \
+                first[4] + second[4] + add_distance,)
+    # <<----------------------------------------------------
+
+    inputDStream = inputDStream.reduceByKey(join_segments)\
+                            .map(lambda x: x[1][4])
+
+    # >>----------------------------------------------------
+    def get_initial_bucket(x: float):
+        bucket_num = int(x // bucket_size)
+        bucket_range = f"{int(bucket_num * bucket_size)}_{int(bucket_num * bucket_size + bucket_size)}"
+        return (bucket_num, (bucket_num, bucket_range, 1))
+    # <<----------------------------------------------------
+    
+    inputDStream = inputDStream.map(get_initial_bucket)
+    inputDStream = inputDStream.reduceByKey(lambda x, y: (x[0], x[1], x[2] + y[2]))\
+                                .map(lambda x: x[1])\
+                                .transform(lambda rdd: rdd.sortBy(lambda x: x[0]))
+
+    solutionDStream = inputDStream
 
     # ---------------------------------------
 
