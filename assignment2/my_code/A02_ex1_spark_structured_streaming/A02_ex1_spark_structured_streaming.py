@@ -23,6 +23,7 @@ import os
 import shutil
 import time
 
+from pyspark.sql.functions import col, dayofweek, dayofweek, expr, substring, window, round
 # ------------------------------------------
 # FUNCTION my_model
 # ------------------------------------------
@@ -74,7 +75,47 @@ def my_model(spark,
     # TO BE COMPLETED
     # ---------------------------------------
 
+    
+    # Select by latitude and longitude
+    intermediateSDF = time_inputSDF.where(\
+                        expr(f"latitude >= {south} AND latitude <= {north} AND " +
+                            f"longitude >= {west} and longitude <= {east}"))
+    
+    # Select for weekdays
+    intermediateSDF = intermediateSDF.where(\
+                        expr(f"DAYOFWEEK(date) > 1 AND DAYOFWEEK(date) < 7"))
 
+    # Select for the hours in hour list
+    intermediateSDF = intermediateSDF.where(
+                        expr(f"substring(date, 12, 2) in {tuple(hours_list)}"))
+
+    # Keep only relevant collumns
+    intermediateSDF = intermediateSDF.select(\
+                        substring('date', 12, 2).alias('hour'),
+                        col('congestion'),
+                        col('congestion').alias('congestion2'),
+                        col('my_time'))
+
+    # Watermark
+    intermediateSDF = intermediateSDF.withWatermark("my_time", "0 seconds")
+    
+    # Group by and take counts and averages
+    intermediateSDF = intermediateSDF.groupby(\
+                            window("my_time", my_frequency, my_frequency),\
+                            col("hour"))\
+                        .agg({"congestion": "sum", "*": "count", "congestion2": "avg"})\
+                        .withColumnRenamed("count(1)", "numMeasurements")\
+                        .withColumnRenamed("sum(congestion)", "congestionMeasurements")\
+                        .withColumnRenamed("avg(congestion2)", "percentage")
+
+    # Get it to the final form
+    intermediateSDF = intermediateSDF.select(\
+                        col("hour"),\
+                        round(col("percentage") * 100, 2).alias("percentage"),\
+                        col("numMeasurements"),\
+                        col("congestionMeasurements"))
+
+    solutionSDF = intermediateSDF
     # ---------------------------------------
 
     # Operation O1: We create the DataStreamWritter, to print by console the results in complete mode
