@@ -23,6 +23,16 @@ import os
 import shutil
 import time
 
+from pyspark.sql.functions import col, dayofweek, dayofweek, expr, substring, window, round, approx_count_distinct
+
+def get_end_time(current_time:str, seconds_horizon:int) -> str:
+    import datetime
+    import time
+    dateformat = "%Y-%m-%d %H:%M:%S"
+    d = datetime.datetime.strptime(current_time, dateformat)
+    d = d + datetime.timedelta(seconds=seconds_horizon)
+    return d.strftime(dateformat)
+
 # ------------------------------------------
 # FUNCTION my_model
 # ------------------------------------------
@@ -69,8 +79,35 @@ def my_model(spark,
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
+    end_time = get_end_time(current_time, seconds_horizon)
+
+    # Select rows within the time window
+    intermediateSDF = time_inputSDF.where(
+                expr(f"atStop == 1 and date >= '{current_time}' and date <= '{end_time}'"))
+    
+    # Drop columns we don't need
+    intermediateSDF = intermediateSDF.select(
+                        col("closerStopID"),
+                        col("vehicleID"),
+                        col("my_time"))
+    
+    # Watermark
+    intermediateSDF = intermediateSDF.withWatermark("my_time", "0 seconds")
+
+    # Get the count of vehicles
+    intermediateSDF = intermediateSDF.groupby(\
+            window("my_time", f"{time_step_interval} seconds", f"{time_step_interval} seconds"),\
+            col("closerStopID"))\
+        .agg(approx_count_distinct("vehicleID").alias("numVehicles"))
 
 
+    # Get it to the final form
+    intermediateSDF = intermediateSDF.select(
+                    col("closerStopID").alias("stationID"),
+                    col("numVehicles"))
+
+
+    solutionSDF = intermediateSDF
     # ---------------------------------------
 
     # Operation O1: We create the DataStreamWritter, to print by console the results in complete mode
