@@ -18,6 +18,7 @@
 
 import pyspark
 import pyspark.sql.functions
+from pyspark.sql.functions import *
 
 import os
 import shutil
@@ -73,11 +74,51 @@ def my_model(spark,
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
+    
+    # Add a watermark
+    intermediateSDF = time_inputSDF.withWatermark("my_time", "0 seconds")
 
+    # Select by the day picked and vehicle id
+    intermediateSDF = intermediateSDF.where(\
+                expr(f"SUBSTRING(date, 0, 10) = '{day_picked}' AND " \
+                    f" atStop != 0 AND vehicleID = {int(vehicle_id)}"))
 
+    # Drop columns that we don't need, and also rename columns
+    intermediateSDF = intermediateSDF.select(
+                        col("my_time"),
+                        expr(f"SUBSTRING(date, 12, 8) as arrivalTime"),
+                        col("busLineID").alias("lineID"),
+                        col("closerStopID").alias("stationID"))
+
+    intermediateSDF = intermediateSDF.groupBy(
+                                window("my_time", my_window_duration_frequency, my_frequency),
+                                col('arrivalTime'),
+                                col('lineID'),
+                                col('stationID'))\
+                            .agg({})
+    
+    # Get to final form
+    intermediateSDF = intermediateSDF.select(
+                                col('arrivalTime'),
+                                col('lineID'),
+                                col('stationID'))
+
+    # Unfortunately, this doesn't work as we an only aggregate once
+    # I'm leaving this code here at the moment to see if it can be modified
+    # to arrive at the answer in some way
+    # Sorting is a round-about operation, we are forced to do a group
+    # and aggregate before ordering.
+    # Hence we do a dummy sort and aggregate, that essentially does nothing
+    # intermediateSDF = intermediateSDF\
+    #        .agg({"arrivalTime": "max", "lineID": "max", "stationID": "max"})\
+    #        .orderBy("arrivalTime")
+    
+
+    solutionSDF = intermediateSDF
     # ---------------------------------------
 
     # Operation O1: We create the DataStreamWritter, to print by console the results in complete mode
+
     myDSW = solutionSDF.writeStream\
                        .format("console") \
                        .trigger(processingTime=my_frequency) \
