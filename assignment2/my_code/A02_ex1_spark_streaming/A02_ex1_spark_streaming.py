@@ -62,6 +62,24 @@ def process_line(line):
     # 4. We return res
     return res
 
+from datetime import datetime
+def is_weekday(raw_tuple):
+    dateformat = '%Y-%m-%d %H:%M:%S'
+    d = datetime.strptime(raw_tuple[0], dateformat)
+    return d.weekday() < 5
+
+def get_hour(row):
+    dateformat = '%Y-%m-%d %H:%M:%S'
+    d = datetime.strptime(row[0], dateformat)
+    return f'{d.hour:02d}'
+
+def get_percentage(x):
+    try:
+        return round(x[0] * 100 / x[1], 2)
+    except:
+        return 0.0
+
+
 # ------------------------------------------
 # FUNCTION my_model
 # ------------------------------------------
@@ -81,6 +99,37 @@ def my_model(ssc,
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
+
+    # Split into fields
+    inputDStream = inputDStream.map(process_line)
+
+    # Filter by weekday
+    inputDStream = inputDStream.filter(is_weekday)
+
+    # Filter by latitude and longitude
+    inputDStream = inputDStream.filter(                                     \
+                        lambda x:                                           \
+                            south <= x[5] and x[5] <= north and             \
+                            west <= x[4] and x[4] <= east)
+
+    # Filter to only include the hours we are interested in
+    inputDStream = inputDStream.filter(lambda x: get_hour(x) in hours_list)
+
+    # convert to key value, (hour, (congestion, count))
+    pairedDStream = inputDStream.map(lambda x: (get_hour(x), (x[3], 1,)))
+
+    reducedDStream = pairedDStream.reduceByKey(\
+                        lambda x, y: (x[0] + y[0], x[1] + y[1],))
+    
+    # Get the percentage of congested for each hour
+    reducedDStream = reducedDStream.map(                                    \
+                        lambda x: (x[0], get_percentage(x[1]), x[1][1], x[1][0]))
+
+    reducedDStream = reducedDStream.transform(                              \
+                        lambda x: x.sortBy(lambda y: y[1], ascending=False))
+
+
+    solutionDStream = reducedDStream
 
 
     # ---------------------------------------
@@ -321,10 +370,10 @@ if __name__ == '__main__':
     # 5. We re-create the directories again
     if local_False_databricks_True == False:
         # 5.1. We re-create the monitoring_dir
-        os.mkdir(monitoring_dir)
+        os.makedirs(monitoring_dir)
 
         # 5.2. We re-create the checkpoint_dir
-        os.mkdir(checkpoint_dir)
+        os.makedirs(checkpoint_dir)
     else:
         # 5.1. We re-create the monitoring_dir
         dbutils.fs.mkdirs(monitoring_dir)

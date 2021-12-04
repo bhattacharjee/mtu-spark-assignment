@@ -22,7 +22,7 @@ import pyspark.sql.functions
 import os
 import shutil
 import time
-
+from pyspark.sql.functions import *
 # ------------------------------------------
 # FUNCTION my_model
 # ------------------------------------------
@@ -76,8 +76,24 @@ def my_model(spark,
     # ---------------------------------------
     # TO BE COMPLETED
     # ---------------------------------------
+    # watermark
+    intermediateSDF = time_inputSDF.withWatermark("my_time", "0 seconds")
 
+    # select rows on the given day, and only buses which have stopped
+    intermediateSDF = intermediateSDF.where(\
+                expr(f"SUBSTRING(date, 0, 10) = '{day_picked}' and atStop = 1"))
 
+    # Discard columns we don't need
+    intermediateSDF = intermediateSDF.select(
+                        col("vehicleID"),
+                        col("closerStopID"))
+
+    # count distinct stationID for each vehicleID
+    intermediateSDF = intermediateSDF.groupBy(col("vehicleID"))\
+                        .agg(approx_count_distinct("closerStopID").alias("numStations"))\
+                        .orderBy(col("vehicleID").desc())
+
+    solutionSDF = intermediateSDF
     # ---------------------------------------
 
     # Operation O1: We create the DataStreamWritter, to print by console the results in complete mode

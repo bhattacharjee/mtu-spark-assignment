@@ -1,0 +1,223 @@
+
+#-------------------------------------------------------------------------------------------------------------------------------#
+
+    # 1. Operation C1: We create the DataFrame from the dataset and the schema
+    my_schema = pyspark.sql.types.StructType([pyspark.sql.types.StructField("value", pyspark.sql.types.StringType(), True)])
+
+    inputDF = spark.read.format("csv") \
+        .option("delimiter", ";") \
+        .option("quote", "") \
+        .option("header", "false") \
+        .schema(my_schema) \
+        .load(my_dataset_dir)
+
+
+    resVAL = inputDF.collect()
+    for item in resVAL:
+        print(item)
+
+Row(value='Argentina Brazil Colombia')
+Row(value='Argentina Brazil')
+Row(value='Argentina Colombia Colombia Colombia')
+
+#-------------------------------------------------------------------------------------------------------------------------------#
+
+
+    # 1. Operation C1: We create the DataFrame from the dataset and the schema
+    my_schema = pyspark.sql.types.StructType([pyspark.sql.types.StructField("value", pyspark.sql.types.StringType(), True)])
+
+    inputDF = spark.read.format("csv") \
+        .option("delimiter", ";") \
+        .option("quote", "") \
+        .option("header", "false") \
+        .schema(my_schema) \
+        .load(my_dataset_dir)
+
+    # 2. Operation T1: We split the String by words
+    word_listDF = inputDF.withColumn("wordList", pyspark.sql.functions.split(pyspark.sql.functions.col("value"), " ")) #\
+                           #.drop("value")
+
+
+    resVAL = word_listDF.collect()
+    for item in resVAL:
+        print(item)
+
+
+Row(value='Argentina Brazil Colombia', wordList=['Argentina', 'Brazil', 'Colombia'])
+Row(value='Argentina Brazil', wordList=['Argentina', 'Brazil'])
+Row(value='Argentina Colombia Colombia Colombia', wordList=['Argentina', 'Colombia', 'Colombia', 'Colombia'])
+	
+#-------------------------------------------------------------------------------------------------------------------------------#
+
+
+    # 1. Operation C1: We create the DataFrame from the dataset and the schema
+    my_schema = pyspark.sql.types.StructType([pyspark.sql.types.StructField("value", pyspark.sql.types.StringType(), True)])
+
+    inputDF = spark.read.format("csv") \
+        .option("delimiter", ";") \
+        .option("quote", "") \
+        .option("header", "false") \
+        .schema(my_schema) \
+        .load(my_dataset_dir)
+
+    # 2. Operation T1: We split the String by words
+    word_listDF = inputDF.withColumn("wordList", pyspark.sql.functions.split(pyspark.sql.functions.col("value"), " ")) \
+                         .drop("value")
+
+    resVAL = word_listDF.collect()
+    for item in resVAL:
+        print(item)
+
+
+Row(wordList=['Argentina', 'Brazil', 'Colombia'])
+Row(wordList=['Argentina', 'Brazil'])
+Row(wordList=['Argentina', 'Colombia', 'Colombia', 'Colombia'])
+
+#-------------------------------------------------------------------------------------------------------------------------------#
+
+
+    # 1. Operation C1: We create the DataFrame from the dataset and the schema
+    my_schema = pyspark.sql.types.StructType([pyspark.sql.types.StructField("value", pyspark.sql.types.StringType(), True)])
+
+    inputDF = spark.read.format("csv") \
+        .option("delimiter", ";") \
+        .option("quote", "") \
+        .option("header", "false") \
+        .schema(my_schema) \
+        .load(my_dataset_dir)
+
+    # 2. Operation T1: We split the String by words
+    word_listDF = inputDF.withColumn("wordList", pyspark.sql.functions.split(pyspark.sql.functions.col("value"), " ")) \
+                         .drop("value")
+
+    # 3. Operation T2: We explode the words separately
+    wordsDF = word_listDF.withColumn("word", pyspark.sql.functions.explode(pyspark.sql.functions.col("wordList"))) #\
+                           #.drop("wordList")
+
+    resVAL = wordsDF.collect()
+    for item in resVAL:
+        print(item)
+
+
+Row(wordList=['Argentina', 'Brazil', 'Colombia'], word='Argentina')
+Row(wordList=['Argentina', 'Brazil', 'Colombia'], word='Brazil')
+Row(wordList=['Argentina', 'Brazil', 'Colombia'], word='Colombia')
+Row(wordList=['Argentina', 'Brazil'], word='Argentina')
+Row(wordList=['Argentina', 'Brazil'], word='Brazil')
+Row(wordList=['Argentina', 'Colombia', 'Colombia', 'Colombia'], word='Argentina')
+Row(wordList=['Argentina', 'Colombia', 'Colombia', 'Colombia'], word='Colombia')
+Row(wordList=['Argentina', 'Colombia', 'Colombia', 'Colombia'], word='Colombia')
+Row(wordList=['Argentina', 'Colombia', 'Colombia', 'Colombia'], word='Colombia')
+
+#-------------------------------------------------------------------------------------------------------------------------------#
+
+
+    # 1. Operation C1: We create the DataFrame from the dataset and the schema
+    my_schema = pyspark.sql.types.StructType([pyspark.sql.types.StructField("value", pyspark.sql.types.StringType(), True)])
+
+    inputDF = spark.read.format("csv") \
+        .option("delimiter", ";") \
+        .option("quote", "") \
+        .option("header", "false") \
+        .schema(my_schema) \
+        .load(my_dataset_dir)
+
+    # 2. Operation T1: We split the String by words
+    word_listDF = inputDF.withColumn("wordList", pyspark.sql.functions.split(pyspark.sql.functions.col("value"), " ")) \
+                         .drop("value")
+
+    # 3. Operation T2: We explode the words separately
+    wordsDF = word_listDF.withColumn("word", pyspark.sql.functions.explode(pyspark.sql.functions.col("wordList"))) \
+                         .drop("wordList")
+
+    resVAL = wordsDF.collect()
+    for item in resVAL:
+        print(item)
+
+Row(word='Argentina')
+Row(word='Brazil')
+Row(word='Colombia')
+Row(word='Argentina')
+Row(word='Brazil')
+Row(word='Argentina')
+Row(word='Colombia')
+Row(word='Colombia')
+Row(word='Colombia')
+
+#-------------------------------------------------------------------------------------------------------------------------------#
+
+
+    # 1. Operation C1: We create the DataFrame from the dataset and the schema
+    my_schema = pyspark.sql.types.StructType([pyspark.sql.types.StructField("value", pyspark.sql.types.StringType(), True)])
+
+    inputDF = spark.read.format("csv") \
+        .option("delimiter", ";") \
+        .option("quote", "") \
+        .option("header", "false") \
+        .schema(my_schema) \
+        .load(my_dataset_dir)
+
+    # 2. Operation T1: We split the String by words
+    word_listDF = inputDF.withColumn("wordList", pyspark.sql.functions.split(pyspark.sql.functions.col("value"), " ")) \
+                         .drop("value")
+
+    # 3. Operation T2: We explode the words separately
+    wordsDF = word_listDF.withColumn("word", pyspark.sql.functions.explode(pyspark.sql.functions.col("wordList"))) \
+                         .drop("wordList")
+
+    # 4. Operation T3: We add the watermark on my_time
+    aggDF = wordsDF.groupBy(pyspark.sql.functions.col("word")) \
+                   .count()
+
+    resVAL = aggDF.collect()
+    for item in resVAL:
+        print(item)
+
+Row(word='Argentina', count=3)
+Row(word='Brazil', count=2)
+Row(word='Colombia', count=4)
+
+#-------------------------------------------------------------------------------------------------------------------------------#
+
+
+    # 1. Operation C1: We create the DataFrame from the dataset and the schema
+    my_schema = pyspark.sql.types.StructType([pyspark.sql.types.StructField("value", pyspark.sql.types.StringType(), True)])
+
+    inputDF = spark.read.format("csv") \
+        .option("delimiter", ";") \
+        .option("quote", "") \
+        .option("header", "false") \
+        .schema(my_schema) \
+        .load(my_dataset_dir)
+
+    # 2. Operation T1: We split the String by words
+    word_listDF = inputDF.withColumn("wordList", pyspark.sql.functions.split(pyspark.sql.functions.col("value"), " ")) \
+                         .drop("value")
+
+    # 3. Operation T2: We explode the words separately
+    wordsDF = word_listDF.withColumn("word", pyspark.sql.functions.explode(pyspark.sql.functions.col("wordList"))) \
+                         .drop("wordList")
+
+    # 4. Operation T3: We add the watermark on my_time
+    aggDF = wordsDF.groupBy(pyspark.sql.functions.col("word")) \
+                   .count()
+
+    # 5. Operation T6: We sort them by the starting time of the window
+    solutionDF = aggDF.orderBy(pyspark.sql.functions.col("count").desc())
+
+    # 6. Operation A1: We collect the results
+    resVAL = solutionDF.collect()
+    for item in resVAL:
+        print(item)
+
+
+Row(word='Colombia', count=4)
+Row(word='Argentina', count=3)
+Row(word='Brazil', count=2)
+
+#-------------------------------------------------------------------------------------------------------------------------------#
+
+
+
+
+
