@@ -106,7 +106,7 @@ def my_model(spark,
                                 my_window_duration_frequency,\
                                 my_frequency)\
                         ).agg(\
-                            expr("COLLECT_SET(CONCAT_WS(';', arrivalTime, lineID, stationID))")\
+                            expr("COLLECT_LIST(CONCAT_WS(';', arrivalTime, lineID, stationID))")\
                             .alias('collapsed')\
                         )
 
