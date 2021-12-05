@@ -86,7 +86,7 @@ def my_model(spark,
     # Drop columns that we don't need, and also rename columns
     intermediateSDF = intermediateSDF.select(
                         col("my_time"),
-                        expr(f"SUBSTRING(date, 12, 8) as arrivalTime"),
+                        expr(f"SUBSTRING(date, 12, 9) as arrivalTime"),
                         col("busLineID").alias("lineID"),
                         col("closerStopID").alias("stationID"))
 
@@ -99,7 +99,7 @@ def my_model(spark,
     
     # Get to final form
     intermediateSDF = intermediateSDF.select(
-                                col('arrivalTime'),
+                                col('arrivalTime').alias("arrival_time"),
                                 col('lineID'),
                                 col('stationID'))
 
