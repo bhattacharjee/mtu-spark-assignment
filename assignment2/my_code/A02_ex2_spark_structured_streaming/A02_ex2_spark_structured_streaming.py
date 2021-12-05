@@ -19,6 +19,7 @@
 import pyspark
 import pyspark.sql.functions
 from pyspark.sql.functions import *
+from pyspark.sql import types
 
 import os
 import shutil
@@ -90,29 +91,54 @@ def my_model(spark,
                         col("busLineID").alias("lineID"),
                         col("closerStopID").alias("stationID"))
 
-    intermediateSDF = intermediateSDF.groupBy(
-                                window("my_time", my_window_duration_frequency, my_frequency),
-                                col('arrivalTime'),
-                                col('lineID'),
-                                col('stationID'))\
-                            .agg({})
-    
-    # Get to final form
-    intermediateSDF = intermediateSDF.select(
-                                col('arrivalTime').alias("arrival_time"),
-                                col('lineID'),
-                                col('stationID'))
+    # Gather all columns up and append them in a single row, essentially a collapse,
+    # By aggregating over the window, and using the function collect_set(concat_ws())
+    # So
+    #     x1, y1, z1
+    #     x2, y2, z2
+    #     ...
+    # now becomes
+    #     x1;y1;z1, x2;y2;z2, ...
+    intermediateSDF = intermediateSDF\
+                        .groupBy(
+                            window(
+                                "my_time",\
+                                my_window_duration_frequency,\
+                                my_frequency)\
+                        ).agg(\
+                            collect_set(\
+                                concat_ws(
+                                    ';', # Separator between columns
+                                    col('arrivalTime'),
+                                    col('lineID'),
+                                    col("stationID")\
+                                )\
+                            )\
+                            .alias('collapsed')\
+                        )
 
-    # Unfortunately, this doesn't work as we an only aggregate once
-    # I'm leaving this code here at the moment to see if it can be modified
-    # to arrive at the answer in some way
-    # Sorting is a round-about operation, we are forced to do a group
-    # and aggregate before ordering.
-    # Hence we do a dummy sort and aggregate, that essentially does nothing
-    # intermediateSDF = intermediateSDF\
-    #        .agg({"arrivalTime": "max", "lineID": "max", "stationID": "max"})\
-    #        .orderBy("arrivalTime")
-    
+    # Now sort each row - we've already collapsed all rows to a column
+    sort_fn = lambda x: sorted(x, reverse=False)
+    sort_udf = udf(sort_fn, types.ArrayType(types.StringType()))
+    intermediateSDF = intermediateSDF.select(\
+                        sort_udf(intermediateSDF['collapsed']).alias('collapsed1'),\
+                        col("collapsed"))
+
+    # Now explode the collapsed row into multiple rows
+    # after this operation every row is of the scheme
+    #   time;lineid;stationid
+    intermediateSDF = intermediateSDF.withColumn(\
+                        "combined",\
+                        explode("collapsed1")).select(col("combined"))
+
+    # Now split by ';' which was our separator, into three columns
+    # and get it to the final form
+    # we need for our output
+    intermediateSDF =  intermediateSDF.select(
+            split(col('combined'),';').getItem(0).alias("arrival_time"),
+            split(col('combined'),';').getItem(1).alias("lineID"),
+            split(col('combined'),';').getItem(2).alias("stationID"))
+
 
     solutionSDF = intermediateSDF
     # ---------------------------------------
