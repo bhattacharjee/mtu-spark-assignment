@@ -87,9 +87,9 @@ def my_model(spark,
     # Drop columns that we don't need, and also rename columns
     intermediateSDF = intermediateSDF.select(
                         col("my_time"),
-                        expr(f"SUBSTRING(date, 12, 9) as arrivalTime"),
-                        col("busLineID").alias("lineID"),
-                        col("closerStopID").alias("stationID"))
+                        expr(f"SUBSTRING(date, 12, 9) AS arrivalTime"),
+                        expr("busLineID AS lineID"),
+                        expr("closerStopID AS stationID"))
 
     # Gather all columns up and append them in a single row, essentially a collapse,
     # By aggregating over the window, and using the function collect_set(concat_ws())
@@ -135,9 +135,9 @@ def my_model(spark,
     # and get it to the final form
     # we need for our output
     intermediateSDF =  intermediateSDF.select(
-            split(col('combined'),';').getItem(0).alias("arrival_time"),
-            split(col('combined'),';').getItem(1).alias("lineID"),
-            split(col('combined'),';').getItem(2).alias("stationID"))
+            expr("SPLIT(combined, ';')[0] AS arrivalTime"),
+            expr("SPLIT(combined, ';')[0] AS lineID"),
+            expr("SPLIT(combined, ';')[0] AS stationID"))
 
 
     solutionSDF = intermediateSDF
