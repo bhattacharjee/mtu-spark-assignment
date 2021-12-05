@@ -198,6 +198,8 @@ def my_main(my_file_1,
         print("Congratulations, the code passed the test!")
     else:
         print("Sorry, the output of the file is incorrect!")
+        import os
+        os.system(f"vim -d {my_file_1} {my_file_2}")
     print("----------------------------------------------------------")
 
 # ---------------------------------------------------------------
@@ -209,9 +211,12 @@ def my_main(my_file_1,
 # ---------------------------------------------------------------
 if __name__ == '__main__':
     # 1. We get the input values
-    solution_file_name = "A02_ex1_spark_streaming.txt"
-    student_file_name = "A02_ex1_spark_structured_streaming.txt"
+    ex_no = 2
+    solution_file_name = f'./A02_ex{ex_no}_spark_structured_streaming.txt'
+    student_file_name = f'/home/phantom/dev/mtu-spark-assignment/assignment2/my_code/A02_ex{ex_no}_spark_structured_streaming/output.txt'
 
+    print(solution_file_name)
+    print(student_file_name)
     # 1.1. If the program is called from console, we modify the parameters
     if (len(sys.argv) > 1):
         # 2.1. We get the student folder path
@@ -219,8 +224,8 @@ if __name__ == '__main__':
         student_file_name = sys.argv[1]
 
     # 2. We get the folders to explore
-    assignment_solution_file = "./Assignment_Solutions/" + solution_file
-    student_solution_file = "./Student_Solutions/" + student_file
+    assignment_solution_file = solution_file_name
+    student_solution_file = student_file_name
 
     # 3. We call to my_main
     my_main(assignment_solution_file,
