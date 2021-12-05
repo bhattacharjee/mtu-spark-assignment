@@ -106,14 +106,7 @@ def my_model(spark,
                                 my_window_duration_frequency,\
                                 my_frequency)\
                         ).agg(\
-                            collect_set(\
-                                concat_ws(
-                                    ';', # Separator between columns
-                                    col('arrivalTime'),
-                                    col('lineID'),
-                                    col("stationID")\
-                                )\
-                            )\
+                            expr("COLLECT_SET(CONCAT_WS(';', arrivalTime, lineID, stationID))")\
                             .alias('collapsed')\
                         )
 
@@ -127,9 +120,9 @@ def my_model(spark,
     # Now explode the collapsed row into multiple rows
     # after this operation every row is of the scheme
     #   time;lineid;stationid
-    intermediateSDF = intermediateSDF.withColumn(\
-                        "combined",\
-                        explode("collapsed1")).select(col("combined"))
+    intermediateSDF = intermediateSDF.select(\
+                        expr("EXPLODE(collapsed1) AS combined"))
+
 
     # Now split by ';' which was our separator, into three columns
     # and get it to the final form
