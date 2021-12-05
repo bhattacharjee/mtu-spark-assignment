@@ -128,9 +128,9 @@ def my_model(spark,
     # and get it to the final form
     # we need for our output
     intermediateSDF =  intermediateSDF.select(
-            expr("SPLIT(combined, ';')[0] AS arrivalTime"),
-            expr("SPLIT(combined, ';')[0] AS lineID"),
-            expr("SPLIT(combined, ';')[0] AS stationID"))
+            expr("SPLIT(combined, ';')[0] AS arrival_time"),
+            expr("SPLIT(combined, ';')[1] AS lineID"),
+            expr("SPLIT(combined, ';')[2] AS stationID"))
 
 
     solutionSDF = intermediateSDF
